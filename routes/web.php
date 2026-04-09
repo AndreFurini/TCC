@@ -2,23 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-use App\Http\Controllers\CategoriaController;
 
-Route::get('/paginainicial', function () {
-    return view('welcome');
-});
+use App\Http\Controllers\SetorController;
+use App\Http\Controllers\OrdemServicoController;
 
-Route::get('/exercicio', function() {
-    return view('exercicio');
-});
+// Página inicial (dashboard)
+Route::get('/', [OrdemServicoController::class, 'dashboard']);
 
-Route::post('/resposta', function(Request $request) {
-    $valor1 = $request->input('valor1');
-    $valor2 = $request->input('valor2');
-    $soma = $valor1 + $valor2;
-    return("A soma é: $soma");
-});
+// SETORES
+Route::resource('setores', SetorController::class);
 
-Route::resource('categorias', CategoriaController::class);
-
-Route::resource('produtos', ProdutoController::class);
+// ORDENS DE SERVIÇO
+Route::resource('ordens', OrdemServicoController::class);
