@@ -30,7 +30,7 @@ class SetorController extends Controller
     public function edit($id)
     {
         $setor = Setor::findOrFail($id);
-        return view('setores.edit', compact('setor'));
+        return view('setores.form', compact('setor'));
     }
 
     public function update(Request $request, $id)
