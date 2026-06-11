@@ -15,7 +15,7 @@ class SetorController extends Controller
 
     public function create()
     {
-        return view('setores.create');
+        return view('setores.form');
     }
 
     public function store(Request $request)
