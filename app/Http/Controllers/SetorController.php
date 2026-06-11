@@ -20,7 +20,7 @@ class SetorController extends Controller
     {
         $empresa_id = Auth::user()->empresa_id;
         $usuarios = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
-        return view('setores.create', compact('usuarios'));
+        return view('setores.form', compact('usuarios'));
     }
 
     public function store(Request $request)
@@ -40,11 +40,14 @@ class SetorController extends Controller
 
     public function edit($id)
     {
-        $empresa_id = Auth::user()->empresa_id;
-        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
-        $usuarios   = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+        $empresa_id    = Auth::user()->empresa_id;
+        $setor         = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+        $usuarios      = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+        $usuariosDoSetor = User::where('empresa_id', $empresa_id)
+                               ->where('setor_id', $setor->id)
+                               ->get();
 
-        return view('setores.edit', compact('setor', 'usuarios'));
+        return view('setores.form', compact('setor', 'usuarios', 'usuariosDoSetor'));
     }
 
     public function update(Request $request, $id)
