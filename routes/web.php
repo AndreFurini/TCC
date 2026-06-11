@@ -1,16 +1,37 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SetorController;
 use App\Http\Controllers\OrdemServicoController;
+use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\DashboardController;
 
-// Página inicial (dashboard)
-Route::get('/', [OrdemServicoController::class, 'dashboard']);
+// -------------------------------------------------------
+// ROTAS PÚBLICAS
+// -------------------------------------------------------
+Route::get('/',         [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login',   [AuthController::class, 'login'])->name('auth.login');
+Route::post('/logout',  [AuthController::class, 'logout'])->name('auth.logout');
 
-// SETORES
-Route::resource('setores', SetorController::class);
+Route::get('/cadastro',  [AuthController::class, 'showCadastro'])->name('cadastro.empresa');
+Route::post('/cadastro', [AuthController::class, 'storeCadastro'])->name('cadastro.empresa.store');
 
-// ORDENS DE SERVIÇO
-Route::resource('ordens', OrdemServicoController::class);
+// -------------------------------------------------------
+// ROTAS PROTEGIDAS (requer login)
+// -------------------------------------------------------
+Route::middleware('auth')->group(function () {
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Setores (Admin)
+    Route::resource('setores', SetorController::class);
+
+    // Usuários (Admin)
+    Route::resource('usuarios', UsuarioController::class);
+
+    // Ordens de Serviço
+    Route::resource('ordens', OrdemServicoController::class);
+
+});
