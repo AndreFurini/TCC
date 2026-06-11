@@ -8,43 +8,36 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ordens_servico', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('empresa_id')
-                  ->constrained('empresas')
-                  ->cascadeOnDelete();
-
-            $table->foreignId('setor_id')
-                  ->nullable()
-                  ->constrained('setores')
-                  ->nullOnDelete();
-
-            $table->foreignId('executor_id')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
-
-            $table->foreignId('criado_por')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
-
-            $table->foreignId('atualizado_por')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
-
-            $table->string('titulo');
-            $table->text('descricao')->nullable();
-
-            $table->string('status')->default('ABERTA');
-            $table->string('urgencia')->default('MEDIA');
-
-            $table->text('devolutiva')->nullable();
-
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('ordens_servico')) {
+            Schema::create('ordens_servico', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('empresa_id')
+                      ->constrained('empresas')
+                      ->cascadeOnDelete();
+                $table->foreignId('setor_id')
+                      ->nullable()
+                      ->constrained('setores')
+                      ->nullOnDelete();
+                $table->foreignId('executor_id')
+                      ->nullable()
+                      ->constrained('users')
+                      ->nullOnDelete();
+                $table->foreignId('criado_por')
+                      ->nullable()
+                      ->constrained('users')
+                      ->nullOnDelete();
+                $table->foreignId('atualizado_por')
+                      ->nullable()
+                      ->constrained('users')
+                      ->nullOnDelete();
+                $table->string('titulo');
+                $table->text('descricao')->nullable();
+                $table->string('status')->default('ABERTA');
+                $table->string('urgencia')->default('MEDIA');
+                $table->text('devolutiva')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

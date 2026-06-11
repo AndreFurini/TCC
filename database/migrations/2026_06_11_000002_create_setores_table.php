@@ -8,20 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('setores', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('empresa_id')
-                  ->constrained('empresas')
-                  ->cascadeOnDelete();
-
-            $table->string('nome');
-
-            $table->unsignedBigInteger('responsavel_id')
-                  ->nullable();
-
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('setores')) {
+            Schema::create('setores', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('empresa_id')
+                      ->constrained('empresas')
+                      ->cascadeOnDelete();
+                $table->string('nome');
+                $table->unsignedBigInteger('responsavel_id')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void
