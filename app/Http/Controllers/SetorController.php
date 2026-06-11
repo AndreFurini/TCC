@@ -3,51 +3,73 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Setor;
+use App\Models\User;
 
 class SetorController extends Controller
 {
     public function index()
     {
-        $setores = Setor::all();
+        $empresa_id = Auth::user()->empresa_id;
+        $setores = Setor::where('empresa_id', $empresa_id)->get();
         return view('setores.index', compact('setores'));
     }
 
     public function create()
     {
-        return view('setores.form');
+        $empresa_id = Auth::user()->empresa_id;
+        $usuarios = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+        return view('setores.create', compact('usuarios'));
     }
 
     public function store(Request $request)
     {
-        Setor::create([
-            'nome' => $request->nome
+        $request->validate([
+            'nome' => 'required|string|max:255',
         ]);
 
-        return redirect('/setores');
+        Setor::create([
+            'empresa_id'     => Auth::user()->empresa_id,
+            'nome'           => $request->nome,
+            'responsavel_id' => $request->responsavel_id ?: null,
+        ]);
+
+        return redirect()->route('setores.index')->with('success', 'Setor criado com sucesso!');
     }
 
     public function edit($id)
     {
-        $setor = Setor::findOrFail($id);
-        return view('setores.form', compact('setor'));
+        $empresa_id = Auth::user()->empresa_id;
+        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+        $usuarios   = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+
+        return view('setores.edit', compact('setor', 'usuarios'));
     }
 
     public function update(Request $request, $id)
     {
-        $setor = Setor::findOrFail($id);
-        $setor->update([
-            'nome' => $request->nome
+        $empresa_id = Auth::user()->empresa_id;
+        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        $request->validate([
+            'nome' => 'required|string|max:255',
         ]);
 
-        return redirect('/setores');
+        $setor->update([
+            'nome'           => $request->nome,
+            'responsavel_id' => $request->responsavel_id ?: null,
+        ]);
+
+        return redirect()->route('setores.index')->with('success', 'Setor atualizado com sucesso!');
     }
 
     public function destroy($id)
     {
-        $setor = Setor::findOrFail($id);
+        $empresa_id = Auth::user()->empresa_id;
+        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
         $setor->delete();
 
-        return redirect('/setores');
+        return redirect()->route('setores.index')->with('success', 'Setor removido com sucesso!');
     }
 }
