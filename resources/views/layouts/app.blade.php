@@ -141,6 +141,26 @@
             margin-bottom: 20px;
             font-size: 0.88rem;
         }
+
+        .alert-warning-custom {
+            background: #fef6e7;
+            border: 1px solid #f5a623;
+            color: #a86a00;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+        }
+
+        .alert-error-custom {
+            background: #fdecea;
+            border: 1px solid #e74c3c;
+            color: #c0392b;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 0.88rem;
+        }
     </style>
     @stack('styles')
 </head>
@@ -225,6 +245,18 @@
         @if(session('success'))
             <div class="alert-success-custom">
                 <i class="bi bi-check-circle"></i> {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="alert-warning-custom">
+                <i class="bi bi-exclamation-triangle"></i> {{ session('warning') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert-error-custom">
+                <i class="bi bi-x-circle"></i> {{ session('error') }}
             </div>
         @endif
 

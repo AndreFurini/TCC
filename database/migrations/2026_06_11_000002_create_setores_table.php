@@ -16,7 +16,11 @@ return new class extends Migration
                       ->cascadeOnDelete();
                 $table->string('nome');
                 $table->unsignedBigInteger('responsavel_id')->nullable();
+                $table->boolean('ativo')->default(true);
                 $table->timestamps();
+
+                // FK de responsavel_id -> users é adicionada na migration de users
+                // (000003), pois a tabela users ainda não existe neste ponto.
             });
         }
     }

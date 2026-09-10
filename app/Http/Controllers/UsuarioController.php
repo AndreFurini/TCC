@@ -28,7 +28,8 @@ class UsuarioController extends Controller
     public function create()
     {
         $setores = Setor::where('empresa_id', Auth::user()->empresa_id)->get();
-        $roles   = User::ROLES;
+        // 'admin' fica de fora: só é criado no cadastro da empresa
+        $roles   = collect(User::ROLES)->except('admin')->all();
 
         return view('usuarios.create', compact('setores', 'roles'));
     }
@@ -85,7 +86,7 @@ class UsuarioController extends Controller
         $empresa_id = Auth::user()->empresa_id;
         $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
         $setores    = Setor::where('empresa_id', $empresa_id)->get();
-        $roles      = User::ROLES;
+        $roles      = collect(User::ROLES)->except('admin')->all();
 
         return view('usuarios.edit', compact('usuario', 'setores', 'roles'));
     }
@@ -137,11 +138,25 @@ class UsuarioController extends Controller
         return redirect()->route('usuarios.index')->with('success', 'Usuário atualizado com sucesso!');
     }
 
-    // Excluir usuário
+    // Excluir usuário (ou inativar, se houver histórico vinculado)
     public function destroy($id)
     {
         $empresa_id = Auth::user()->empresa_id;
         $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        if ($usuario->id === Auth::id()) {
+            return redirect()->route('usuarios.index')
+                ->with('error', 'Você não pode excluir o próprio usuário.');
+        }
+
+        // Regra: só exclui de verdade quando não há nenhum vínculo em outras tabelas.
+        if ($usuario->possuiVinculos()) {
+            $usuario->update(['ativo' => false]);
+
+            return redirect()->route('usuarios.index')
+                ->with('warning', 'Usuário possui histórico vinculado e não pode ser excluído — foi inativado.');
+        }
+
         $usuario->delete();
 
         return redirect()->route('usuarios.index')->with('success', 'Usuário removido com sucesso!');

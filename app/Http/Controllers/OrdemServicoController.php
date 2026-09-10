@@ -62,6 +62,7 @@ class OrdemServicoController extends Controller
         if ($user->isCoordenador()) {
             $executores = User::where('empresa_id', $empresa_id)
                 ->where('role', 'executor')
+                ->where('ativo', true)
                 ->orderBy('name')
                 ->get();
         }
@@ -142,6 +143,11 @@ class OrdemServicoController extends Controller
         if ($user->isCoordenador()) {
             $executores = User::where('empresa_id', $user->empresa_id)
                 ->where('role', 'executor')
+                ->where(function ($q) use ($ordem) {
+                    // executores ativos + o executor já atribuído (mesmo que inativo)
+                    $q->where('ativo', true)
+                      ->orWhere('id', $ordem->executor_id);
+                })
                 ->orderBy('name')
                 ->get();
         }

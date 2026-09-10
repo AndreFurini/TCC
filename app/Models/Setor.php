@@ -12,7 +12,23 @@ class Setor extends Model
         'empresa_id',
         'nome',
         'responsavel_id',
+        'ativo',
     ];
+
+    protected $casts = [
+        'ativo' => 'boolean',
+    ];
+
+    /**
+     * Indica se o setor está referenciado em outras tabelas
+     * (usuários lotados no setor ou ordens de serviço).
+     * Enquanto houver vínculo, ele só pode ser inativado, nunca excluído.
+     */
+    public function possuiVinculos(): bool
+    {
+        return User::where('setor_id', $this->id)->exists()
+            || OrdemServico::where('setor_id', $this->id)->exists();
+    }
 
     public function empresa()
     {

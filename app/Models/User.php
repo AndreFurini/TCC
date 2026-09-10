@@ -18,6 +18,7 @@ class User extends Authenticatable
         'password',
         'role',
         'setor_id',
+        'ativo',
     ];
 
     protected $hidden = [
@@ -30,6 +31,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'ativo'             => 'boolean',
         ];
     }
 
@@ -56,4 +58,21 @@ class User extends Authenticatable
     public function isCoordenador()  { return $this->role === 'coordenador'; }
     public function isExecutor()     { return $this->role === 'executor'; }
     public function isColaborador()  { return $this->role === 'colaborador'; }
+
+    /**
+     * Indica se o usuário está referenciado em outras tabelas
+     * (ordens de serviço ou como responsável de setor).
+     * Enquanto houver vínculo, ele só pode ser inativado, nunca excluído.
+     */
+    public function possuiVinculos(): bool
+    {
+        $emOrdens = OrdemServico::where('criado_por', $this->id)
+            ->orWhere('executor_id', $this->id)
+            ->orWhere('atualizado_por', $this->id)
+            ->exists();
+
+        $responsavelSetor = Setor::where('responsavel_id', $this->id)->exists();
+
+        return $emOrdens || $responsavelSetor;
+    }
 }

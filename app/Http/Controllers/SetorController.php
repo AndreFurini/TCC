@@ -19,7 +19,10 @@ class SetorController extends Controller
     public function create()
     {
         $empresa_id = Auth::user()->empresa_id;
-        $usuarios = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+        $usuarios = User::where('empresa_id', $empresa_id)
+            ->where('ativo', true)
+            ->orderBy('name')
+            ->get();
         return view('setores.form', compact('usuarios'));
     }
 
@@ -42,7 +45,13 @@ class SetorController extends Controller
     {
         $empresa_id    = Auth::user()->empresa_id;
         $setor         = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
-        $usuarios      = User::where('empresa_id', $empresa_id)->orderBy('name')->get();
+        $usuarios      = User::where('empresa_id', $empresa_id)
+            ->where(function ($q) use ($setor) {
+                $q->where('ativo', true)
+                  ->orWhere('id', $setor->responsavel_id);
+            })
+            ->orderBy('name')
+            ->get();
         $usuariosDoSetor = User::where('empresa_id', $empresa_id)
                                ->where('setor_id', $setor->id)
                                ->get();
@@ -71,6 +80,15 @@ class SetorController extends Controller
     {
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        // Regra: só exclui de verdade quando não há nenhum vínculo em outras tabelas.
+        if ($setor->possuiVinculos()) {
+            $setor->update(['ativo' => false]);
+
+            return redirect()->route('setores.index')
+                ->with('warning', 'Setor possui usuários ou ordens vinculados e não pode ser excluído — foi inativado.');
+        }
+
         $setor->delete();
 
         return redirect()->route('setores.index')->with('success', 'Setor removido com sucesso!');

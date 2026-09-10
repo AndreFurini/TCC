@@ -15,25 +15,25 @@ return new class extends Migration
                       ->constrained('empresas')
                       ->cascadeOnDelete();
                 $table->foreignId('setor_id')
-                      ->nullable()
                       ->constrained('setores')
-                      ->nullOnDelete();
+                      ->restrictOnDelete();
                 $table->foreignId('executor_id')
                       ->nullable()
                       ->constrained('users')
                       ->nullOnDelete();
                 $table->foreignId('criado_por')
-                      ->nullable()
                       ->constrained('users')
-                      ->nullOnDelete();
+                      ->restrictOnDelete();
                 $table->foreignId('atualizado_por')
                       ->nullable()
                       ->constrained('users')
                       ->nullOnDelete();
                 $table->string('titulo');
-                $table->text('descricao')->nullable();
-                $table->string('status')->default('ABERTA');
-                $table->string('urgencia')->default('MEDIA');
+                $table->text('descricao');
+                $table->enum('status', ['ABERTA', 'EM_ANDAMENTO', 'FINALIZADA', 'CANCELADA'])
+                      ->default('ABERTA');
+                $table->enum('urgencia', ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'])
+                      ->default('BAIXA');
                 $table->text('devolutiva')->nullable();
                 $table->timestamps();
             });

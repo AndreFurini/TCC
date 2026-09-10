@@ -19,19 +19,34 @@ return new class extends Migration
                       ->constrained('setores')
                       ->nullOnDelete();
                 $table->string('name');
-                $table->string('username')->unique();
+                $table->string('username', 50)->unique();
                 $table->string('email')->unique();
-                $table->string('role')->default('colaborador');
+                $table->enum('role', ['admin', 'coordenador', 'executor', 'colaborador'])
+                      ->default('colaborador');
+                $table->boolean('ativo')->default(true);
                 $table->timestamp('email_verified_at')->nullable();
                 $table->string('password');
                 $table->rememberToken();
                 $table->timestamps();
+            });
+
+            // FK adiada: setores.responsavel_id -> users.id
+            Schema::table('setores', function (Blueprint $table) {
+                $table->foreign('responsavel_id')
+                      ->references('id')->on('users')
+                      ->nullOnDelete();
             });
         }
     }
 
     public function down(): void
     {
+        if (Schema::hasTable('setores')) {
+            Schema::table('setores', function (Blueprint $table) {
+                $table->dropForeign(['responsavel_id']);
+            });
+        }
+
         Schema::dropIfExists('users');
     }
 };

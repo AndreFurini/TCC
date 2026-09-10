@@ -43,6 +43,10 @@ class AuthController extends Controller
             return back()->with('error', 'Usuário ou senha incorretos.')->withInput();
         }
 
+        if (!$user->ativo) {
+            return back()->with('error', 'Este usuário está inativo. Contate o administrador da empresa.')->withInput();
+        }
+
         Auth::login($user);
 
         return redirect()->route('dashboard');
