@@ -1,15 +1,27 @@
 @extends('layouts.app')
 
-@section('content')
+@push('styles')
+<style>
+    .btn-cadastrar {
+        background:#1a35a8; color:#fff; border-radius:8px; padding:10px 22px;
+        font-size:0.9rem; font-weight:600; text-decoration:none;
+        display:inline-flex; align-items:center; gap:8px;
+        transition:background 0.2s;
+    }
+    .btn-cadastrar:hover { background:#142a86; }
 
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-    <h5 style="font-weight:700; color:#222; margin:0;">Setores</h5>
-    <a href="{{ route('setores.create') }}"
-       style="background:#1a35a8; color:white; border-radius:8px; padding:10px 22px;
-              font-size:0.9rem; font-weight:600; text-decoration:none; display:inline-block;">
-        Cadastrar Novo Setor
-    </a>
-</div>
+    .toolbar-cadastro { margin-bottom:20px; }
+
+    .lista-vazia {
+        display:flex; flex-direction:column; align-items:center;
+        text-align:center; padding:60px 20px; gap:14px;
+    }
+    .lista-vazia .icone-vazio { font-size:2.4rem; color:#c5cde8; }
+    .lista-vazia p { color:#999; font-size:0.9rem; margin:0; }
+</style>
+@endpush
+
+@section('content')
 
 {{-- Alertas --}}
 @if(session('sucesso'))
@@ -27,11 +39,23 @@
 @endif
 
 @if($setores->isEmpty())
-    <div style="color:#999; font-size:0.9rem; text-align:center; padding:60px 0;">
-        <i class="bi bi-diagram-3" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
-        Nenhum setor cadastrado ainda.
+
+    <div class="lista-vazia">
+        <i class="bi bi-diagram-3 icone-vazio"></i>
+        <p>Nenhum setor cadastrado ainda.</p>
+        <a href="{{ route('setores.create') }}" class="btn-cadastrar">
+            <i class="bi bi-plus-lg"></i> Cadastrar Novo Setor
+        </a>
     </div>
+
 @else
+
+    <div class="toolbar-cadastro">
+        <a href="{{ route('setores.create') }}" class="btn-cadastrar">
+            <i class="bi bi-plus-lg"></i> Cadastrar Novo Setor
+        </a>
+    </div>
+
     <div style="display:flex; flex-direction:column; gap:10px;">
         @foreach($setores as $setor)
             <div style="background:white; border-radius:10px; padding:16px 20px;
@@ -78,6 +102,7 @@
             </div>
         @endforeach
     </div>
+
 @endif
 
 @endsection

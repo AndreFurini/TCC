@@ -77,6 +77,38 @@
                 </div>
             </div>
 
+            {{-- Adicionar usuários sem setor --}}
+            <div style="margin-bottom:24px;">
+                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:8px;">
+                    Adicionar usuários a este setor:
+                </label>
+
+                @if(isset($usuariosSemSetor) && $usuariosSemSetor->isNotEmpty())
+                    <div style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;
+                                border:1.5px solid #c5cde8; border-radius:6px; padding:12px 14px;">
+                        @foreach($usuariosSemSetor as $u)
+                            <label style="display:flex; align-items:center; gap:8px;
+                                          font-size:0.9rem; color:#333; cursor:pointer;">
+                                <input type="checkbox" name="usuarios[]" value="{{ $u->id }}"
+                                       {{ in_array($u->id, (array) old('usuarios', [])) ? 'checked' : '' }}>
+                                {{ $u->name }}
+                                <span style="color:#999; font-size:0.8rem;">
+                                    ({{ \App\Models\User::ROLES[$u->role] ?? $u->role }})
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div style="font-size:0.78rem; color:#999; margin-top:4px;">
+                        Só aparecem aqui usuários que ainda não pertencem a nenhum setor.
+                    </div>
+                @else
+                    <div style="font-size:0.83rem; color:#999; border:1.5px dashed #c5cde8;
+                                border-radius:6px; padding:12px 14px;">
+                        Nenhum usuário sem setor disponível no momento.
+                    </div>
+                @endif
+            </div>
+
             {{-- Botões --}}
             <div style="display:flex; gap:12px; justify-content:flex-end;">
                 <a href="{{ route('setores.index') }}"
@@ -134,7 +166,7 @@
                 </div>
                 <div style="padding:10px 20px; font-size:0.78rem; color:#999;">
                     <i class="bi bi-info-circle"></i>
-                    Para vincular usuários, edite o cadastro do usuário.
+                    Para remover um usuário deste setor ou trocá-lo de setor, edite o cadastro dele.
                 </div>
             @else
                 <div style="color:#999; font-size:0.88rem; text-align:center; padding:40px 20px;">

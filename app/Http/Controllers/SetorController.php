@@ -23,22 +23,50 @@ class SetorController extends Controller
             ->where('ativo', true)
             ->orderBy('name')
             ->get();
-        return view('setores.form', compact('usuarios'));
+        $usuariosSemSetor = User::where('empresa_id', $empresa_id)
+            ->where('ativo', true)
+            ->whereNull('setor_id')
+            ->orderBy('name')
+            ->get();
+        return view('setores.form', compact('usuarios', 'usuariosSemSetor'));
     }
 
     public function store(Request $request)
     {
+        $empresa_id = Auth::user()->empresa_id;
+
         $request->validate([
-            'nome' => 'required|string|max:255',
+            'nome'        => 'required|string|max:255',
+            'usuarios'    => 'nullable|array',
+            'usuarios.*'  => 'integer',
         ]);
 
-        Setor::create([
-            'empresa_id'     => Auth::user()->empresa_id,
+        $setor = Setor::create([
+            'empresa_id'     => $empresa_id,
             'nome'           => $request->nome,
             'responsavel_id' => $request->responsavel_id ?: null,
         ]);
 
+        $this->vincularUsuariosSemSetor($request, $setor, $empresa_id);
+
         return redirect()->route('setores.index')->with('success', 'Setor criado com sucesso!');
+    }
+
+    /**
+     * Vincula ao setor os usuários selecionados que ainda não pertencem a nenhum setor.
+     * O filtro whereNull('setor_id') garante que usuários já lotados em outro setor
+     * não sejam movidos por um id enviado indevidamente no formulário.
+     */
+    private function vincularUsuariosSemSetor(Request $request, Setor $setor, int $empresa_id): void
+    {
+        if (!$request->filled('usuarios')) {
+            return;
+        }
+
+        User::where('empresa_id', $empresa_id)
+            ->whereIn('id', $request->usuarios)
+            ->whereNull('setor_id')
+            ->update(['setor_id' => $setor->id]);
     }
 
     public function edit($id)
@@ -55,8 +83,13 @@ class SetorController extends Controller
         $usuariosDoSetor = User::where('empresa_id', $empresa_id)
                                ->where('setor_id', $setor->id)
                                ->get();
+        $usuariosSemSetor = User::where('empresa_id', $empresa_id)
+                                ->where('ativo', true)
+                                ->whereNull('setor_id')
+                                ->orderBy('name')
+                                ->get();
 
-        return view('setores.form', compact('setor', 'usuarios', 'usuariosDoSetor'));
+        return view('setores.form', compact('setor', 'usuarios', 'usuariosDoSetor', 'usuariosSemSetor'));
     }
 
     public function update(Request $request, $id)
@@ -65,13 +98,17 @@ class SetorController extends Controller
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
         $request->validate([
-            'nome' => 'required|string|max:255',
+            'nome'        => 'required|string|max:255',
+            'usuarios'    => 'nullable|array',
+            'usuarios.*'  => 'integer',
         ]);
 
         $setor->update([
             'nome'           => $request->nome,
             'responsavel_id' => $request->responsavel_id ?: null,
         ]);
+
+        $this->vincularUsuariosSemSetor($request, $setor, $empresa_id);
 
         return redirect()->route('setores.index')->with('success', 'Setor atualizado com sucesso!');
     }

@@ -40,11 +40,6 @@
             padding: 24px 24px 8px 24px;
         }
 
-        .divider-blue {
-            height: 8px;
-            background-color: #1a35a8;
-        }
-
         label {
             font-size: 0.85rem;
             color: #444;
@@ -87,15 +82,18 @@
 
         .row-fields > div {
             flex: 1;
+            min-width: 0;
         }
 
         .password-wrap {
             display: flex;
             gap: 16px;
+            align-items: flex-start;
         }
 
         .password-wrap > div {
             flex: 1;
+            min-width: 0;
         }
 
         /* Checklist de senha */
@@ -149,13 +147,21 @@
         }
 
         .btn-voltar {
-            background: none;
-            color: #1a35a8;
+            background-color: #1a35a8;
+            color: white;
             border: none;
-            font-size: 0.88rem;
+            border-radius: 6px;
+            padding: 11px 40px;
+            font-size: 0.95rem;
+            font-weight: 600;
             cursor: pointer;
             margin-right: 16px;
-            text-decoration: underline;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .btn-voltar:hover {
+            background-color: #142a86;
         }
 
         .error-msg {
@@ -166,6 +172,70 @@
             font-size: 0.85rem;
             margin: 16px 24px 0;
         }
+
+        /* ---- JANELA DE AVISO ---- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 30, 60, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 999;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 380px;
+            padding: 28px 24px 24px;
+            text-align: center;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+        }
+
+        .modal-box .modal-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #fdecea;
+            color: #e74c3c;
+            font-size: 1.6rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+        }
+
+        .modal-box h3 {
+            font-size: 1.05rem;
+            color: #1a35a8;
+            margin-bottom: 6px;
+        }
+
+        .modal-box p {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .modal-box button {
+            background-color: #1a35a8;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 36px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal-box button:hover { background-color: #142a86; }
     </style>
 </head>
 <body>
@@ -175,10 +245,15 @@
     <form action="{{ route('cadastro.empresa.store') }}" method="POST" id="formCadastro">
         @csrf
 
-        @if($errors->any())
+        @php
+            $errosVisiveis = collect($errors->all())->reject(fn ($e) => str_contains($e, 'conferem'))->values();
+            $senhasNaoConferem = $errosVisiveis->count() !== count($errors->all());
+        @endphp
+
+        @if($errosVisiveis->isNotEmpty())
             <div class="error-msg">
                 <ul style="margin:0; padding-left:18px;">
-                    @foreach($errors->all() as $error)
+                    @foreach($errosVisiveis as $error)
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
@@ -191,22 +266,22 @@
 
             <label>Nome da Empresa:</label>
             <input type="text" name="nome_empresa" value="{{ old('nome_empresa') }}"
+                   placeholder="Digite o nome da empresa"
                    class="{{ $errors->has('nome_empresa') ? 'is-invalid' : '' }}" required>
             @error('nome_empresa') <span class="invalid-feedback">{{ $message }}</span> @enderror
 
             <label>CNPJ: <span style="color:#999; font-weight:400">(opcional)</span></label>
-            <input type="text" name="cnpj" value="{{ old('cnpj') }}" placeholder="00.000.000/0000-00"
-                   style="max-width: 260px;">
+            <input type="text" name="cnpj" id="cnpjInput" value="{{ old('cnpj') }}" placeholder="00.000.000/0000-00"
+                   inputmode="numeric" maxlength="18" style="max-width: 260px;">
         </div>
 
-        <!-- DIVISOR -->
-        <div class="divider-blue"></div>
-
         <!-- SEÇÃO: DADOS DO ADMINISTRADOR -->
+        <div class="section-header">Dados do Administrador</div>
         <div class="section-body">
 
             <label>Nome Completo:</label>
             <input type="text" name="nome_completo" value="{{ old('nome_completo') }}"
+                   placeholder="Digite o nome completo"
                    class="{{ $errors->has('nome_completo') ? 'is-invalid' : '' }}" required>
             @error('nome_completo') <span class="invalid-feedback">{{ $message }}</span> @enderror
 
@@ -214,12 +289,14 @@
                 <div>
                     <label>Nome de Usuário:</label>
                     <input type="text" name="username" value="{{ old('username') }}"
+                           placeholder="Digite o nome de usuário"
                            class="{{ $errors->has('username') ? 'is-invalid' : '' }}" required>
                     @error('username') <span class="invalid-feedback">{{ $message }}</span> @enderror
                 </div>
                 <div>
                     <label>E-mail:</label>
                     <input type="email" name="email" value="{{ old('email') }}"
+                           placeholder="nome@empresa.com.br"
                            class="{{ $errors->has('email') ? 'is-invalid' : '' }}" required>
                     @error('email') <span class="invalid-feedback">{{ $message }}</span> @enderror
                 </div>
@@ -229,12 +306,18 @@
                 <div>
                     <label>Senha:</label>
                     <input type="password" name="password" id="senhaInput"
+                           placeholder="Crie uma senha forte"
                            class="{{ $errors->has('password') ? 'is-invalid' : '' }}"
                            oninput="validarSenha()" required>
-                    @error('password') <span class="invalid-feedback">{{ $message }}</span> @enderror
+                    @error('password')
+                        @unless(str_contains($message, 'conferem'))
+                            <span class="invalid-feedback">{{ $message }}</span>
+                        @endunless
+                    @enderror
 
                     <label>Confirmar Senha:</label>
                     <input type="password" name="password_confirmation"
+                           placeholder="Repita a senha"
                            class="{{ $errors->has('password_confirmation') ? 'is-invalid' : '' }}" required>
                 </div>
 
@@ -254,11 +337,21 @@
 
         <!-- AÇÕES -->
         <div class="footer-actions">
-            <a href="{{ route('login') }}" class="btn-voltar">Voltar ao Login</a>
+            <a href="{{ route('login') }}" class="btn-voltar">Voltar</a>
             <button type="submit" class="btn-salvar">Salvar</button>
         </div>
 
     </form>
+</div>
+
+<!-- JANELA DE AVISO -->
+<div class="modal-overlay" id="modalAviso">
+    <div class="modal-box">
+        <div class="modal-icon">!</div>
+        <h3>Senhas não coincidem</h3>
+        <p id="modalAvisoTexto">A senha e a confirmação de senha precisam ser iguais.</p>
+        <button type="button" onclick="fecharAviso()">Entendi</button>
+    </div>
 </div>
 
 <script>
@@ -280,6 +373,77 @@ function validarSenha() {
         el.classList.toggle('invalid', !valido);
     }
 }
+
+function mascararCNPJ(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 14);
+    if (d.length > 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+    if (d.length > 8)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`;
+    if (d.length > 5)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`;
+    if (d.length > 2)  return `${d.slice(0,2)}.${d.slice(2)}`;
+    return d;
+}
+
+const cnpjInput = document.getElementById('cnpjInput');
+if (cnpjInput) {
+    cnpjInput.value = mascararCNPJ(cnpjInput.value);
+    cnpjInput.addEventListener('input', () => {
+        cnpjInput.value = mascararCNPJ(cnpjInput.value);
+    });
+}
+
+/* ---- CONFERÊNCIA DE SENHAS ---- */
+const formCadastro   = document.getElementById('formCadastro');
+const inputSenha     = document.getElementById('senhaInput');
+const inputConfirma  = document.querySelector('input[name="password_confirmation"]');
+const modalAviso     = document.getElementById('modalAviso');
+
+function marcarSenhasInvalidas(invalido) {
+    inputSenha.classList.toggle('is-invalid', invalido);
+    inputConfirma.classList.toggle('is-invalid', invalido);
+}
+
+function senhasCoincidem() {
+    return inputSenha.value === inputConfirma.value;
+}
+
+function abrirAviso(texto) {
+    if (texto) document.getElementById('modalAvisoTexto').textContent = texto;
+    modalAviso.classList.add('show');
+}
+
+function fecharAviso() {
+    modalAviso.classList.remove('show');
+}
+
+inputConfirma.addEventListener('input', () => {
+    marcarSenhasInvalidas(inputConfirma.value !== '' && !senhasCoincidem());
+});
+
+inputSenha.addEventListener('input', () => {
+    if (inputConfirma.value !== '') marcarSenhasInvalidas(!senhasCoincidem());
+});
+
+formCadastro.addEventListener('submit', (e) => {
+    if (!senhasCoincidem()) {
+        e.preventDefault();
+        marcarSenhasInvalidas(true);
+        abrirAviso('A senha e a confirmação de senha precisam ser iguais.');
+        inputConfirma.focus();
+    }
+});
+
+modalAviso.addEventListener('click', (e) => {
+    if (e.target === modalAviso) fecharAviso();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharAviso();
+});
+
+@if($senhasNaoConferem)
+    marcarSenhasInvalidas(true);
+    abrirAviso();
+@endif
 </script>
 
 </body>

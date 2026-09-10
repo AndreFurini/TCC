@@ -43,8 +43,8 @@ class UsuarioController extends Controller
             'name'     => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:users,username',
             'email'    => 'required|email|unique:users,email',
-            'role'     => 'required|in:coordenador,executor,colaborador',
-            'setor_id' => 'required|exists:setores,id',
+            'role'     => 'nullable|in:coordenador,executor,colaborador',
+            'setor_id' => 'nullable|exists:setores,id',
             'password' => [
                 'required',
                 'confirmed',
@@ -60,8 +60,6 @@ class UsuarioController extends Controller
             'username.required' => 'O nome de usuário é obrigatório.',
             'username.unique'   => 'Este nome de usuário já está em uso.',
             'email.unique'      => 'Este e-mail já está cadastrado.',
-            'role.required'     => 'Selecione uma função.',
-            'setor_id.required' => 'Selecione um setor.',
             'password.min'      => 'A senha deve ter no mínimo 10 caracteres.',
             'password.confirmed'=> 'As senhas não conferem.',
             'password.regex'    => 'A senha não atende aos requisitos de segurança.',
@@ -73,8 +71,8 @@ class UsuarioController extends Controller
             'username'   => $request->username,
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
-            'role'       => $request->role,
-            'setor_id'   => $request->setor_id,
+            'role'       => $request->role ?: 'colaborador',
+            'setor_id'   => $request->setor_id ?: null,
         ]);
 
         return redirect()->route('usuarios.index')->with('success', 'Usuário cadastrado com sucesso!');
@@ -101,8 +99,8 @@ class UsuarioController extends Controller
             'name'     => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:users,username,' . $usuario->id,
             'email'    => 'required|email|unique:users,email,' . $usuario->id,
-            'role'     => 'required|in:coordenador,executor,colaborador',
-            'setor_id' => 'required|exists:setores,id',
+            'role'     => 'nullable|in:coordenador,executor,colaborador',
+            'setor_id' => 'nullable|exists:setores,id',
             'password' => [
                 'nullable',
                 'confirmed',
@@ -124,8 +122,8 @@ class UsuarioController extends Controller
             'name'     => $request->name,
             'username' => $request->username,
             'email'    => $request->email,
-            'role'     => $request->role,
-            'setor_id' => $request->setor_id,
+            'role'     => $request->role ?: $usuario->role,
+            'setor_id' => $request->setor_id ?: null,
         ];
 
         // Só atualiza senha se preenchida

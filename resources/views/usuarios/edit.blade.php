@@ -2,6 +2,14 @@
 
 @section('content')
 
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+    <a href="{{ route('usuarios.index') }}"
+       style="color:#1a35a8; font-size:1.1rem; text-decoration:none;" title="Voltar">
+        <i class="bi bi-arrow-left-circle-fill"></i>
+    </a>
+    <h5 style="font-weight:700; color:#222; margin:0;">Editar Usuário</h5>
+</div>
+
 <div style="background:white; border-radius:12px; overflow:hidden;
             box-shadow:0 2px 12px rgba(0,0,0,0.08); max-width:700px;">
 
@@ -60,10 +68,13 @@
                               border-radius:6px; font-size:0.93rem; outline:none;">
             </div>
             <div style="flex:1;">
-                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Função:</label>
-                <select name="role" required
+                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">
+                    Função: <span style="color:#999; font-weight:400">(opcional)</span>
+                </label>
+                <select name="role"
                         style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                border-radius:6px; font-size:0.93rem; outline:none; background:white;">
+                    <option value="">Selecionar...</option>
                     @foreach($roles as $key => $label)
                         @if($key !== 'admin')
                             <option value="{{ $key }}" {{ old('role', $usuario->role) == $key ? 'selected' : '' }}>
@@ -83,10 +94,13 @@
                               border-radius:6px; font-size:0.93rem; outline:none;">
             </div>
             <div style="flex:1;">
-                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Setor:</label>
-                <select name="setor_id" required
+                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">
+                    Setor: <span style="color:#999; font-weight:400">(opcional)</span>
+                </label>
+                <select name="setor_id"
                         style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                border-radius:6px; font-size:0.93rem; outline:none; background:white;">
+                    <option value="">Sem setor</option>
                     @foreach($setores as $setor)
                         <option value="{{ $setor->id }}" {{ old('setor_id', $usuario->setor_id) == $setor->id ? 'selected' : '' }}>
                             {{ $setor->nome }}
