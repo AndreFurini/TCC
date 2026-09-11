@@ -446,7 +446,42 @@
 
 @include('partials.cards-contagem')
 
-<div style="margin-top:24px;">
+{{-- Atrasadas + Sem executor no meu setor --}}
+<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px; margin-top:16px;">
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <i class="bi bi-alarm" style="color:#e74c3c;"></i>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">OS Atrasadas</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:{{ $atrasadas > 0 ? '#e74c3c' : '#222' }};">
+            {{ str_pad($atrasadas, 2, '0', STR_PAD_LEFT) }}
+        </div>
+        <div style="font-size:0.72rem; color:#999; margin-top:4px;">data de entrega vencida, não finalizada</div>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <i class="bi bi-person-dash" style="color:#e67e22;"></i>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">Sem Executor no Meu Setor</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:{{ $semExecutorMeuSetor > 0 ? '#e67e22' : '#222' }};">
+            {{ str_pad($semExecutorMeuSetor, 2, '0', STR_PAD_LEFT) }}
+        </div>
+        <div style="font-size:0.72rem; color:#999; margin-top:4px;">esperando alguém pegar</div>
+    </div>
+</div>
+
+<div style="margin-top:20px; margin-bottom:16px;">
+    <a href="{{ route('ordens.create') }}"
+       style="background:#1a35a8; color:white; border-radius:8px; padding:10px 22px;
+              font-size:0.9rem; font-weight:600; text-decoration:none; display:inline-block;">
+        Nova Ordem de Serviço
+    </a>
+</div>
+
+<div>
     @if($ordens->isEmpty())
         <div style="color:#999; font-size:0.9rem; text-align:center; padding:60px 0;">
             <i class="bi bi-card-checklist" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
@@ -475,6 +510,14 @@
                         @php
                             $uCor = $urgCores[$ordem->urgencia] ?? '#999';
                             $sCor = \App\Models\OrdemServico::STATUS_CORES[$ordem->status] ?? '#999';
+                            // Mesma prioridade usada em ordens/show.blade.php (souExecutorFormal /
+                            // podeAssumir / executorComoSolicitante): "Atribuída a você" só quando o
+                            // executante é de fato o usuário logado; "Disponível" quando é do setor
+                            // dele e ninguém pegou ainda (ele poderia assumir); "Você solicitou"
+                            // quando ele criou mas não se aplica nenhum dos dois casos acima.
+                            $atribuidaAVoce = $ordem->executor_id === $user->id;
+                            $disponivel     = !$atribuidaAVoce && $ordem->executor_id === null && $ordem->setor_id === $user->setor_id;
+                            $souSolicitante = !$atribuidaAVoce && !$disponivel && $ordem->criado_por === $user->id;
                         @endphp
                         <tr onclick="location.href='{{ route('ordens.show', $ordem->id) }}'">
                             <td class="muted">#{{ $ordem->id }}</td>
@@ -483,7 +526,26 @@
                                     {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
                                 </span>
                             </td>
-                            <td class="col-titulo">{{ $ordem->titulo }}</td>
+                            <td class="col-titulo">
+                                {{ $ordem->titulo }}
+                                @if($atribuidaAVoce)
+                                    <span class="badge-tab" style="background:#1a35a822; color:#1a35a8; margin-left:4px;">
+                                        Atribuída a você
+                                    </span>
+                                @elseif($disponivel)
+                                    <span class="badge-tab" style="background:#27ae6022; color:#27ae60; margin-left:4px;">
+                                        Disponível
+                                    </span>
+                                @elseif($souSolicitante)
+                                    <span class="badge-tab" style="background:#6c5ce722; color:#6c5ce7; margin-left:4px;">
+                                        Você solicitou
+                                    </span>
+                                @else
+                                    <span class="badge-tab" style="background:#99999922; color:#666; margin-left:4px;">
+                                        Do seu setor
+                                    </span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="badge-tab" style="background:{{ $sCor }}22; color:{{ $sCor }};">
                                     {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status }}

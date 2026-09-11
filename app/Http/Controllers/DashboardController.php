@@ -30,9 +30,13 @@ class DashboardController extends Controller
             }
         }
 
-        // Executor: só vê as OS do próprio setor
+        // Executor: vê as OS do próprio setor + as que ele mesmo criou
+        // (agora ele também pode abrir OS, inclusive pra outro setor)
         if ($user->isExecutor()) {
-            $query->where('setor_id', $user->setor_id);
+            $query->where(function ($q) use ($user) {
+                $q->where('setor_id', $user->setor_id)
+                  ->orWhere('criado_por', $user->id);
+            });
         }
 
         // Colaborador: só vê as que criou
@@ -67,6 +71,7 @@ class DashboardController extends Controller
         // ---------------------------------------------------------------
         $atrasadas             = 0;
         $semExecutor           = 0;
+        $semExecutorMeuSetor   = 0;
         $distribuicaoUrgencia  = collect();
         $rankingSetores        = collect();
         $setoresSemResponsavel = collect();
@@ -98,6 +103,25 @@ class DashboardController extends Controller
                 ->get();
         }
 
+        // Painel extra do Executor: atrasadas (no que ele vê: setor + o que
+        // ele mesmo pediu) e a fila do PRÓPRIO setor ainda sem executor
+        // definido — diferente do "sem executor" do admin/coordenador, que
+        // é da empresa toda (ou do setor que eles selecionaram no filtro).
+        if ($user->isExecutor()) {
+            $emAbertoExecutor = (clone $query)->whereNotIn('status', ['FINALIZADA', 'CANCELADA']);
+
+            $atrasadas = (clone $emAbertoExecutor)
+                ->whereNotNull('data_entrega')
+                ->where('data_entrega', '<', now()->startOfDay())
+                ->count();
+
+            $semExecutorMeuSetor = OrdemServico::where('empresa_id', $empresa_id)
+                ->where('setor_id', $user->setor_id)
+                ->whereNotIn('status', ['FINALIZADA', 'CANCELADA'])
+                ->whereNull('executor_id')
+                ->count();
+        }
+
         if ($user->isAdmin()) {
             $rankingSetores = Setor::where('empresa_id', $empresa_id)
                 ->where('ativo', true)
@@ -117,7 +141,7 @@ class DashboardController extends Controller
         return view('dashboard', compact(
             'user', 'abertas', 'em_andamento', 'finalizadas',
             'urgente', 'ordens', 'setores', 'setor_selecionado',
-            'atrasadas', 'semExecutor', 'distribuicaoUrgencia',
+            'atrasadas', 'semExecutor', 'semExecutorMeuSetor', 'distribuicaoUrgencia',
             'rankingSetores', 'setoresSemResponsavel', 'ordensRecentes'
         ));
     }
