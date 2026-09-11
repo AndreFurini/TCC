@@ -8,7 +8,28 @@
     $cor         = $cores[$ordem->status] ?? '#999';
     $urgCores    = ['BAIXA'=>'#27ae60','MEDIA'=>'#f39c12','ALTA'=>'#e67e22','URGENTE'=>'#e74c3c'];
     $corUrg      = $urgCores[$ordem->urgencia] ?? '#999';
-    $podeCriar   = $ordem->criado_por === $user->id;
+    $podeCriar    = $ordem->criado_por === $user->id;
+    $osEmAberto   = !in_array($ordem->status, ['FINALIZADA', 'CANCELADA'], true);
+
+    // Executor "formalmente atribuído": é o executor_id de fato da OS
+    // (seja porque o coordenador atribuiu, seja porque ele mesmo assumiu).
+    $souExecutorFormal = $user->isExecutor() && $ordem->executor_id === $user->id;
+
+    // Pode "assumir": é do setor dele, ainda sem executante, e a OS não
+    // está encerrada. Se ele também for quem criou (pediu algo pro próprio
+    // setor), assumir prevalece sobre editar como solicitante.
+    $podeAssumir = $user->isExecutor()
+        && $ordem->executor_id === null
+        && $ordem->setor_id === $user->setor_id
+        && $osEmAberto;
+
+    $podeLiberar = $souExecutorFormal && $osEmAberto;
+
+    // Executor "como solicitante": só criou a OS — não é o executor formal
+    // nem candidato a assumir (ex.: pediu algo pra outro setor, ou o setor
+    // dele já tem outro executor cuidando). Editar título/descrição, igual colaborador.
+    $executorComoSolicitante = $user->isExecutor() && !$souExecutorFormal && !$podeAssumir;
+    $podeEditarTituloDescricao = ($user->isColaborador() || $executorComoSolicitante) && $podeCriar;
 @endphp
 
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
@@ -23,6 +44,26 @@
     <div style="background:#eafaf1; border:1px solid #27ae60; color:#1e8449;
                 border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:0.88rem;">
         <i class="bi bi-check-circle"></i> {{ session('success') }}
+    </div>
+@endif
+
+@if($podeAssumir)
+    <div style="background:#eef3ff; border:1px solid #1a35a8; border-radius:10px;
+                padding:16px 20px; margin-bottom:20px; max-width:760px;
+                display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div style="font-size:0.88rem; color:#1a35a8;">
+            <i class="bi bi-info-circle"></i>
+            Esta OS é do seu setor e ainda não tem executante definido.
+        </div>
+        <form action="{{ route('ordens.assumir', $ordem->id) }}" method="POST" style="margin:0;">
+            @csrf
+            @method('PATCH')
+            <button type="submit"
+                    style="background:#1a35a8; color:white; border:none; border-radius:6px;
+                           padding:10px 24px; font-size:0.9rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+                <i class="bi bi-hand-index-thumb"></i> Assumir esta OS
+            </button>
+        </form>
     </div>
 @endif
 
@@ -77,7 +118,7 @@
             {{-- Título --}}
             <div style="margin-bottom:16px;">
                 <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Título:</label>
-                @if($user->isColaborador() && $podeCriar)
+                @if($podeEditarTituloDescricao)
                     <input type="text" name="titulo" value="{{ old('titulo', $ordem->titulo) }}" required
                            style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                   border-radius:6px; font-size:0.93rem; outline:none;">
@@ -101,7 +142,7 @@
             {{-- Descrição --}}
             <div style="margin-bottom:16px;">
                 <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Descrição:</label>
-                @if($user->isColaborador() && $podeCriar)
+                @if($podeEditarTituloDescricao)
                     <textarea name="descricao" rows="4" required
                               style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                      border-radius:6px; font-size:0.93rem; outline:none; resize:vertical;">{{ old('descricao', $ordem->descricao) }}</textarea>
@@ -171,7 +212,7 @@
             {{-- Devolutiva — Coordenador e Executor podem escrever --}}
             <div style="margin-bottom:16px;">
                 <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Devolutiva:</label>
-                @if($user->isCoordenador() || $user->isExecutor())
+                @if($user->isCoordenador() || $souExecutorFormal)
                     <textarea name="devolutiva" rows="3"
                               placeholder="Comentários sobre a OS, andamento ou resposta ao solicitante..."
                               style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
@@ -236,8 +277,8 @@
                     </button>
                 @endif
 
-                {{-- EXECUTOR: Devolutiva + Finalizar --}}
-                @if($user->isExecutor())
+                {{-- EXECUTOR formalmente atribuído: Devolutiva + Finalizar --}}
+                @if($souExecutorFormal)
                     <button type="submit" name="finalizar" value="1"
                             @if($ordem->status === 'FINALIZADA') disabled @endif
                             style="background:{{ $ordem->status === 'FINALIZADA' ? '#ccc' : '#27ae60' }};
@@ -255,8 +296,8 @@
                     @endif
                 @endif
 
-                {{-- COLABORADOR: Salvar (título/desc) e Excluir (se criou) --}}
-                @if($user->isColaborador())
+                {{-- COLABORADOR, ou EXECUTOR como solicitante: Salvar (título/desc) e Excluir (se criou) --}}
+                @if($user->isColaborador() || $executorComoSolicitante)
                     @if($podeCriar)
                         <form action="{{ route('ordens.destroy', $ordem->id) }}" method="POST"
                               onsubmit="return confirm('Excluir esta OS?')">
@@ -280,5 +321,20 @@
         </div>
     </div>
 </form>
+
+@if($podeLiberar)
+    <div style="max-width:760px; display:flex; justify-content:flex-end; margin-top:12px;">
+        <form action="{{ route('ordens.liberar', $ordem->id) }}" method="POST"
+              onsubmit="return confirm('Se desvincular desta OS? Ela volta pra fila do seu setor, sem executante (status Aberta).')">
+            @csrf
+            @method('PATCH')
+            <button type="submit"
+                    style="background:#fff; color:#e67e22; border:1.5px solid #e67e22; border-radius:6px;
+                           padding:10px 28px; font-size:0.9rem; font-weight:600; cursor:pointer;">
+                <i class="bi bi-box-arrow-right"></i> Liberar OS
+            </button>
+        </form>
+    </div>
+@endif
 
 @endsection

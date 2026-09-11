@@ -37,5 +37,7 @@ Route::middleware('auth')->group(function () {
 
     // Ordens de Serviço
     Route::resource('ordens', OrdemServicoController::class);
+    Route::patch('ordens/{orden}/assumir', [OrdemServicoController::class, 'assumir'])->name('ordens.assumir');
+    Route::patch('ordens/{orden}/liberar', [OrdemServicoController::class, 'liberar'])->name('ordens.liberar');
 
 });

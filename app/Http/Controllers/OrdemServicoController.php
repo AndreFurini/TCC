@@ -50,8 +50,8 @@ class OrdemServicoController extends Controller
     {
         $user = Auth::user();
 
-        // Admin, Coordenador e Colaborador podem criar
-        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isColaborador()) {
+        // Admin, Coordenador, Executor e Colaborador podem criar
+        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isExecutor() && !$user->isColaborador()) {
             abort(403);
         }
 
@@ -78,11 +78,11 @@ class OrdemServicoController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isColaborador()) {
+        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isExecutor() && !$user->isColaborador()) {
             abort(403);
         }
 
-        // Admin e Coordenador definem urgência e executor; Colaborador não.
+        // Admin e Coordenador definem urgência e executor; Executor e Colaborador não.
         $comOpcoes = $user->isAdmin() || $user->isCoordenador();
 
         $rules = [
@@ -131,9 +131,11 @@ class OrdemServicoController extends Controller
             ->with(['setor', 'executor', 'criadoPor', 'atualizadoPor'])
             ->findOrFail($id);
 
-        // Executor só vê OS atribuídas a ele ou do seu setor
+        // Executor só vê OS atribuídas a ele, do seu setor, ou que ele mesmo criou
         if ($user->isExecutor()) {
-            if ($ordem->executor_id !== $user->id && $ordem->setor_id !== $user->setor_id) {
+            if ($ordem->executor_id !== $user->id
+                && $ordem->setor_id !== $user->setor_id
+                && $ordem->criado_por !== $user->id) {
                 abort(403);
             }
         }
@@ -187,26 +189,35 @@ class OrdemServicoController extends Controller
             return redirect()->route('ordens.index')->with('success', 'OS atualizada com sucesso!');
         }
 
-        // --- EXECUTOR: só pode adicionar devolutiva e finalizar ---
+        // --- EXECUTOR: se for o atribuído (ou do mesmo setor), age como
+        // executor (devolutiva/finalizar); se só criou a OS — ex.: pediu algo
+        // pra outro setor — age como colaborador (edita título/descrição) ---
         if ($user->isExecutor()) {
-            if ($ordem->executor_id !== $user->id && $ordem->setor_id !== $user->setor_id) {
+            $souExecutorAtribuido = $ordem->executor_id === $user->id || $ordem->setor_id === $user->setor_id;
+            $souCriador           = $ordem->criado_por === $user->id;
+
+            if (!$souExecutorAtribuido && !$souCriador) {
                 abort(403);
             }
 
-            $request->validate(['devolutiva' => 'nullable|string']);
+            if ($souExecutorAtribuido) {
+                $request->validate(['devolutiva' => 'nullable|string']);
 
-            $dados = [
-                'devolutiva'     => $request->devolutiva,
-                'atualizado_por' => $user->id,
-            ];
+                $dados = [
+                    'devolutiva'     => $request->devolutiva,
+                    'atualizado_por' => $user->id,
+                ];
 
-            if ($request->has('finalizar')) {
-                $dados['status'] = 'FINALIZADA';
+                if ($request->has('finalizar')) {
+                    $dados['status'] = 'FINALIZADA';
+                }
+
+                $ordem->update($dados);
+
+                return redirect()->route('dashboard')->with('success', 'OS atualizada com sucesso!');
             }
 
-            $ordem->update($dados);
-
-            return redirect()->route('dashboard')->with('success', 'OS atualizada com sucesso!');
+            return $this->salvarEdicaoDoCriador($request, $ordem, $user);
         }
 
         // --- COLABORADOR: pode editar título e descrição se for o criador ---
@@ -215,29 +226,39 @@ class OrdemServicoController extends Controller
                 abort(403);
             }
 
-            $request->validate([
-                'titulo'    => 'required|string|max:255',
-                'descricao' => 'required|string',
-            ]);
-
-            $ordem->fill([
-                'titulo'         => $request->titulo,
-                'descricao'      => $request->descricao,
-                'atualizado_por' => $user->id,
-            ]);
-
-            // Só marca a data de alteração quando o criador realmente
-            // mudou o conteúdo (título ou descrição).
-            if ($ordem->isDirty(['titulo', 'descricao'])) {
-                $ordem->alterada_pelo_criador_em = now();
-            }
-
-            $ordem->save();
-
-            return redirect()->route('dashboard')->with('success', 'OS atualizada com sucesso!');
+            return $this->salvarEdicaoDoCriador($request, $ordem, $user);
         }
 
         abort(403);
+    }
+
+    /**
+     * Edição de título/descrição por quem CRIOU a OS mas não é o
+     * executor responsável por ela (colaborador, ou executor que abriu
+     * um chamado fora do seu escopo de execução).
+     */
+    private function salvarEdicaoDoCriador(Request $request, OrdemServico $ordem, User $user)
+    {
+        $request->validate([
+            'titulo'    => 'required|string|max:255',
+            'descricao' => 'required|string',
+        ]);
+
+        $ordem->fill([
+            'titulo'         => $request->titulo,
+            'descricao'      => $request->descricao,
+            'atualizado_por' => $user->id,
+        ]);
+
+        // Só marca a data de alteração quando o criador realmente
+        // mudou o conteúdo (título ou descrição).
+        if ($ordem->isDirty(['titulo', 'descricao'])) {
+            $ordem->alterada_pelo_criador_em = now();
+        }
+
+        $ordem->save();
+
+        return redirect()->route('dashboard')->with('success', 'OS atualizada com sucesso!');
     }
 
     // -------------------------------------------------------
@@ -255,5 +276,75 @@ class OrdemServicoController extends Controller
         $ordem->delete();
 
         return redirect()->route('dashboard')->with('success', 'OS excluída com sucesso!');
+    }
+
+    // -------------------------------------------------------
+    // ASSUMIR — executor se autoatribui a uma OS do próprio setor
+    // que ainda não tem executante definido. O coordenador continua
+    // podendo reatribuir a qualquer momento pelo detalhe da OS.
+    // -------------------------------------------------------
+    public function assumir($id)
+    {
+        $user  = Auth::user();
+        $ordem = OrdemServico::where('empresa_id', $user->empresa_id)->findOrFail($id);
+
+        if (!$user->isExecutor()) {
+            abort(403);
+        }
+
+        if ($ordem->setor_id !== $user->setor_id) {
+            abort(403, 'Você só pode assumir ordens do seu próprio setor.');
+        }
+
+        if ($ordem->executor_id !== null) {
+            return redirect()->route('ordens.show', $ordem->id)
+                ->with('error', 'Esta OS já tem um executante definido.');
+        }
+
+        if (in_array($ordem->status, ['FINALIZADA', 'CANCELADA'], true)) {
+            return redirect()->route('ordens.show', $ordem->id)
+                ->with('error', 'Esta OS já foi encerrada.');
+        }
+
+        $ordem->update([
+            'executor_id'    => $user->id,
+            'status'         => 'EM_ANDAMENTO',
+            'atualizado_por' => $user->id,
+        ]);
+
+        return redirect()->route('ordens.show', $ordem->id)->with('success', 'Você assumiu esta OS.');
+    }
+
+    // -------------------------------------------------------
+    // LIBERAR — executor se desvincula de uma OS que está com ele,
+    // voltando o status pra Aberta (pra outro pegar ou o coordenador
+    // reatribuir).
+    // -------------------------------------------------------
+    public function liberar($id)
+    {
+        $user  = Auth::user();
+        $ordem = OrdemServico::where('empresa_id', $user->empresa_id)->findOrFail($id);
+
+        if (!$user->isExecutor() || $ordem->executor_id !== $user->id) {
+            abort(403);
+        }
+
+        if (in_array($ordem->status, ['FINALIZADA', 'CANCELADA'], true)) {
+            return redirect()->route('ordens.show', $ordem->id)
+                ->with('error', 'Esta OS já foi encerrada, não é possível se desvincular.');
+        }
+
+        $dados = [
+            'executor_id'    => null,
+            'atualizado_por' => $user->id,
+        ];
+
+        if ($ordem->status === 'EM_ANDAMENTO') {
+            $dados['status'] = 'ABERTA';
+        }
+
+        $ordem->update($dados);
+
+        return redirect()->route('ordens.show', $ordem->id)->with('success', 'Você se desvinculou desta OS.');
     }
 }
