@@ -1,23 +1,27 @@
 @extends('layouts.app')
 
+@push('styles')
+<style>
+    .btn-nova-os {
+        background:#1a35a8; color:#fff; border-radius:8px; padding:9px 20px;
+        font-size:0.88rem; font-weight:600; text-decoration:none;
+        display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
+        transition:background 0.2s;
+    }
+    .btn-nova-os:hover { background:#142a86; }
+</style>
+@endpush
+
 @section('content')
 
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+<div style="display:flex; align-items:center; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
     <h5 style="font-weight:700; color:#222; margin:0;">Ordens de Serviço</h5>
-    <a href="{{ route('ordens.create') }}"
-       style="background:#1a35a8; color:white; border-radius:8px; padding:10px 22px;
-              font-size:0.9rem; font-weight:600; text-decoration:none; display:inline-block;">
-        Nova Ordem de Serviço
-    </a>
+    @if(Auth::user()->isCoordenador() || Auth::user()->isAdmin())
+        <a href="{{ route('ordens.create') }}" class="btn-nova-os">
+            <i class="bi bi-plus-lg"></i> Nova Ordem de Serviço
+        </a>
+    @endif
 </div>
-
-{{-- Alertas --}}
-@if(session('success'))
-    <div style="background:#eafaf1; border:1px solid #27ae60; color:#1e8449;
-                border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:0.88rem;">
-        <i class="bi bi-check-circle"></i> {{ session('success') }}
-    </div>
-@endif
 
 {{-- Filtros --}}
 <form method="GET" action="{{ route('ordens.index') }}"
@@ -26,11 +30,11 @@
              display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
 
     <div style="flex:1; min-width:140px;">
-        <label style="font-size:0.78rem; color:#666; display:block; margin-bottom:4px;">Status</label>
+        <label style="font-size:0.78rem; color:#666; display:block; margin-bottom:4px;">Situação</label>
         <select name="status"
                 style="width:100%; padding:8px 10px; border:1.5px solid #c5cde8;
                        border-radius:6px; font-size:0.88rem; background:white; outline:none;">
-            <option value="">Todos</option>
+            <option value="">Todas</option>
             @foreach(\App\Models\OrdemServico::STATUS as $key => $label)
                 <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>
                     {{ $label }}
@@ -40,7 +44,7 @@
     </div>
 
     <div style="flex:1; min-width:140px;">
-        <label style="font-size:0.78rem; color:#666; display:block; margin-bottom:4px;">Urgência</label>
+        <label style="font-size:0.78rem; color:#666; display:block; margin-bottom:4px;">Prioridade</label>
         <select name="urgencia"
                 style="width:100%; padding:8px 10px; border:1.5px solid #c5cde8;
                        border-radius:6px; font-size:0.88rem; background:white; outline:none;">
@@ -81,60 +85,59 @@
     </div>
 </form>
 
-{{-- Lista de OS --}}
+{{-- Lista de OS (tabela) --}}
 @if($ordens->isEmpty())
     <div style="color:#999; font-size:0.9rem; text-align:center; padding:60px 0;">
         <i class="bi bi-card-checklist" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
         Nenhuma ordem de serviço encontrada.
     </div>
 @else
-    <div style="display:flex; flex-direction:column; gap:10px;">
-        @foreach($ordens as $ordem)
-            @php
-                $cores = \App\Models\OrdemServico::STATUS_CORES;
-                $cor   = $cores[$ordem->status] ?? '#999';
-                $urgenciaCores = ['BAIXA'=>'#27ae60','MEDIA'=>'#f39c12','ALTA'=>'#e67e22','URGENTE'=>'#e74c3c'];
-                $corUrgencia = $urgenciaCores[$ordem->urgencia] ?? '#999';
-            @endphp
-            <a href="{{ route('ordens.show', $ordem->id) }}"
-               style="background:white; border-radius:10px; padding:16px 20px;
-                      box-shadow:0 2px 8px rgba(0,0,0,0.06); text-decoration:none; color:inherit;
-                      display:flex; align-items:center; justify-content:space-between; gap:12px;
-                      transition: box-shadow 0.2s;"
-               onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.10)'"
-               onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'">
-
-                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
-                    <span style="width:12px; height:12px; background:{{ $cor }};
-                                 border-radius:50%; flex-shrink:0;"></span>
-                    <div style="min-width:0;">
-                        <div style="font-weight:700; font-size:0.95rem; color:#222;
-                                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                            {{ $ordem->titulo }}
-                        </div>
-                        <div style="font-size:0.8rem; color:#888; margin-top:2px;">
-                            {{ $ordem->setor->nome ?? '—' }}
-                            @if($ordem->executor)
-                                · Executor: {{ $ordem->executor->name }}
-                            @else
-                                · <span style="color:#e67e22;">Sem executor</span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:16px; flex-shrink:0;">
-                    <span style="background:{{ $corUrgencia }}22; color:{{ $corUrgencia }};
-                                 font-size:0.75rem; font-weight:700; padding:3px 10px;
-                                 border-radius:20px; white-space:nowrap;">
-                        {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
-                    </span>
-                    <span style="font-size:0.8rem; color:#999; white-space:nowrap;">
-                        {{ $ordem->created_at->format('d/m/Y') }}
-                    </span>
-                </div>
-            </a>
-        @endforeach
+    @php
+        $urgCores = ['BAIXA'=>'#27ae60','MEDIA'=>'#f39c12','ALTA'=>'#e67e22','URGENTE'=>'#e74c3c'];
+    @endphp
+    <div class="tabela-os-wrap">
+        <table class="tabela-os">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Prioridade</th>
+                    <th>Título</th>
+                    <th>Situação</th>
+                    <th>Setor solicitante</th>
+                    <th>Executor</th>
+                    <th>Data de solicitação</th>
+                    <th>Data de entrega</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($ordens as $ordem)
+                    @php
+                        $uCor = $urgCores[$ordem->urgencia] ?? '#999';
+                        $sCor = \App\Models\OrdemServico::STATUS_CORES[$ordem->status] ?? '#999';
+                    @endphp
+                    <tr onclick="location.href='{{ route('ordens.show', $ordem->id) }}'">
+                        <td class="muted">#{{ $ordem->id }}</td>
+                        <td>
+                            <span class="badge-tab" style="background:{{ $uCor }}22; color:{{ $uCor }};">
+                                {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
+                            </span>
+                        </td>
+                        <td class="col-titulo">{{ $ordem->titulo }}</td>
+                        <td>
+                            <span class="badge-tab" style="background:{{ $sCor }}22; color:{{ $sCor }};">
+                                {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status }}
+                            </span>
+                        </td>
+                        <td>{{ $ordem->setor->nome ?? '—' }}</td>
+                        <td @class(['muted' => !$ordem->executor])>{{ $ordem->executor->name ?? '—' }}</td>
+                        <td>{{ $ordem->created_at->format('d/m/Y') }}</td>
+                        <td @class(['muted' => !$ordem->data_entrega])>
+                            {{ $ordem->data_entrega ? $ordem->data_entrega->format('d/m/Y') : '—' }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
 @endif
 

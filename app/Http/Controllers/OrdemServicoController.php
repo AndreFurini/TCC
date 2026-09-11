@@ -11,15 +11,16 @@ use Illuminate\Support\Facades\Auth;
 class OrdemServicoController extends Controller
 {
     // -------------------------------------------------------
-    // INDEX — listagem de OS (Coordenador)
+    // INDEX — listagem de OS (Coordenador e Admin)
     // -------------------------------------------------------
     public function index(Request $request)
     {
         $user       = Auth::user();
         $empresa_id = $user->empresa_id;
 
-        // Apenas coordenador acessa a listagem completa
-        if (!$user->isCoordenador()) {
+        // Coordenador e Admin veem a listagem completa da empresa.
+        // Admin apenas visualiza (histórico + filtros); não cria/edita OS.
+        if (!$user->isCoordenador() && !$user->isAdmin()) {
             return redirect()->route('dashboard');
         }
 
@@ -49,17 +50,17 @@ class OrdemServicoController extends Controller
     {
         $user = Auth::user();
 
-        // Coordenador e Colaborador podem criar
-        if (!$user->isCoordenador() && !$user->isColaborador()) {
+        // Admin, Coordenador e Colaborador podem criar
+        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isColaborador()) {
             abort(403);
         }
 
         $empresa_id = $user->empresa_id;
         $setores    = Setor::where('empresa_id', $empresa_id)->orderBy('nome')->get();
 
-        // Executores disponíveis (só coordenador verá o campo de executante)
+        // Executores disponíveis (Admin e Coordenador veem o campo de executante)
         $executores = collect();
-        if ($user->isCoordenador()) {
+        if ($user->isAdmin() || $user->isCoordenador()) {
             $executores = User::where('empresa_id', $empresa_id)
                 ->where('role', 'executor')
                 ->where('ativo', true)
@@ -77,18 +78,21 @@ class OrdemServicoController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->isCoordenador() && !$user->isColaborador()) {
+        if (!$user->isAdmin() && !$user->isCoordenador() && !$user->isColaborador()) {
             abort(403);
         }
 
+        // Admin e Coordenador definem urgência e executor; Colaborador não.
+        $comOpcoes = $user->isAdmin() || $user->isCoordenador();
+
         $rules = [
-            'titulo'    => 'required|string|max:255',
-            'setor_id'  => 'required|exists:setores,id',
-            'descricao' => 'required|string',
+            'titulo'       => 'required|string|max:255',
+            'setor_id'     => 'required|exists:setores,id',
+            'descricao'    => 'required|string',
+            'data_entrega' => 'nullable|date',
         ];
 
-        // Coordenador pode definir urgência e executor
-        if ($user->isCoordenador()) {
+        if ($comOpcoes) {
             $rules['urgencia']    = 'required|in:BAIXA,MEDIA,ALTA,URGENTE';
             $rules['executor_id'] = 'nullable|exists:users,id';
         }
@@ -98,6 +102,7 @@ class OrdemServicoController extends Controller
             'setor_id.required'  => 'Selecione um setor.',
             'descricao.required' => 'A descrição é obrigatória.',
             'urgencia.required'  => 'Selecione o grau de urgência.',
+            'data_entrega.date'  => 'Data de entrega inválida.',
         ]);
 
         OrdemServico::create([
@@ -105,9 +110,10 @@ class OrdemServicoController extends Controller
             'titulo'       => $request->titulo,
             'descricao'    => $request->descricao,
             'status'       => 'ABERTA',
-            'urgencia'     => $user->isCoordenador() ? $request->urgencia : 'BAIXA',
+            'urgencia'     => $comOpcoes ? $request->urgencia : 'BAIXA',
             'setor_id'     => $request->setor_id,
-            'executor_id'  => $user->isCoordenador() ? $request->executor_id : null,
+            'executor_id'  => $comOpcoes ? $request->executor_id : null,
+            'data_entrega' => $request->data_entrega ?: null,
             'criado_por'   => $user->id,
             'atualizado_por' => $user->id,
         ]);
@@ -214,11 +220,19 @@ class OrdemServicoController extends Controller
                 'descricao' => 'required|string',
             ]);
 
-            $ordem->update([
+            $ordem->fill([
                 'titulo'         => $request->titulo,
                 'descricao'      => $request->descricao,
                 'atualizado_por' => $user->id,
             ]);
+
+            // Só marca a data de alteração quando o criador realmente
+            // mudou o conteúdo (título ou descrição).
+            if ($ordem->isDirty(['titulo', 'descricao'])) {
+                $ordem->alterada_pelo_criador_em = now();
+            }
+
+            $ordem->save();
 
             return redirect()->route('dashboard')->with('success', 'OS atualizada com sucesso!');
         }

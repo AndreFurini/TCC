@@ -5,7 +5,7 @@
 @php $user = Auth::user(); @endphp
 
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-    <a href="{{ $user->isCoordenador() ? route('ordens.index') : route('dashboard') }}"
+    <a href="{{ ($user->isCoordenador() || $user->isAdmin()) ? route('ordens.index') : route('dashboard') }}"
        style="color:#1a35a8; font-size:1.1rem; text-decoration:none;" title="Voltar">
         <i class="bi bi-arrow-left-circle-fill"></i>
     </a>
@@ -65,8 +65,8 @@
             </select>
         </div>
 
-        {{-- Urgência e Executor — só para Coordenador --}}
-        @if($user->isCoordenador())
+        {{-- Urgência e Executor — Admin e Coordenador --}}
+        @if($user->isCoordenador() || $user->isAdmin())
             <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
                 <div style="flex:1; min-width:180px;">
                     <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">
@@ -103,6 +103,18 @@
             </div>
         @endif
 
+        {{-- Data de Entrega (opcional) --}}
+        <div style="margin-bottom:16px;">
+            <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">
+                Data de Entrega Prevista:
+                <span style="color:#999; font-weight:400;">(opcional)</span>
+            </label>
+            <input type="date" name="data_entrega" value="{{ old('data_entrega') }}"
+                   style="width:100%; padding:9px 12px;
+                          border:1.5px solid {{ $errors->has('data_entrega') ? '#e74c3c' : '#c5cde8' }};
+                          border-radius:6px; font-size:0.93rem; outline:none; background:white;">
+        </div>
+
         {{-- Descrição --}}
         <div style="margin-bottom:24px;">
             <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">
@@ -117,7 +129,7 @@
 
         {{-- Botões --}}
         <div style="display:flex; gap:12px; justify-content:flex-end;">
-            <a href="{{ $user->isCoordenador() ? route('ordens.index') : route('dashboard') }}"
+            <a href="{{ ($user->isCoordenador() || $user->isAdmin()) ? route('ordens.index') : route('dashboard') }}"
                style="padding:10px 28px; border:1.5px solid #e74c3c; border-radius:6px;
                       color:#e74c3c; text-decoration:none; font-size:0.9rem; font-weight:600;">
                 Cancelar

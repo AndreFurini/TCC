@@ -34,6 +34,10 @@ return new class extends Migration
                       ->default('ABERTA');
                 $table->enum('urgencia', ['BAIXA', 'MEDIA', 'ALTA', 'URGENTE'])
                       ->default('BAIXA');
+                $table->date('data_entrega')->nullable();
+                // Marca a última vez que o CRIADOR da OS editou o conteúdo
+                // (título/descrição). Não muda com devolutiva nem troca de executor.
+                $table->timestamp('alterada_pelo_criador_em')->nullable();
                 $table->text('devolutiva')->nullable();
                 $table->timestamps();
             });

@@ -18,7 +18,14 @@ class OrdemServico extends Model
         'executor_id',
         'criado_por',
         'atualizado_por',
+        'data_entrega',
+        'alterada_pelo_criador_em',
         'devolutiva',
+    ];
+
+    protected $casts = [
+        'data_entrega'             => 'date',
+        'alterada_pelo_criador_em' => 'datetime',
     ];
 
     const STATUS = [

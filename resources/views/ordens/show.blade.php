@@ -12,23 +12,11 @@
 @endphp
 
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-    <a href="{{ $user->isCoordenador() ? route('ordens.index') : route('dashboard') }}"
+    <a href="{{ ($user->isCoordenador() || $user->isAdmin()) ? route('ordens.index') : route('dashboard') }}"
        style="color:#1a35a8; font-size:1.1rem; text-decoration:none;" title="Voltar">
         <i class="bi bi-arrow-left-circle-fill"></i>
     </a>
-    <h5 style="font-weight:700; color:#222; margin:0; flex:1;">Detalhe da OS</h5>
-
-    {{-- Badge de status --}}
-    <span style="background:{{ $cor }}22; color:{{ $cor }}; font-size:0.8rem;
-                 font-weight:700; padding:4px 14px; border-radius:20px;">
-        {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status }}
-    </span>
-
-    {{-- Badge de urgência --}}
-    <span style="background:{{ $corUrg }}22; color:{{ $corUrg }}; font-size:0.8rem;
-                 font-weight:700; padding:4px 14px; border-radius:20px;">
-        {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
-    </span>
+    <h5 style="font-weight:700; color:#222; margin:0;">Detalhe da OS</h5>
 </div>
 
 @if(session('success'))
@@ -46,8 +34,31 @@
                 box-shadow:0 2px 12px rgba(0,0,0,0.08); max-width:760px;">
 
         <div style="background:#1a35a8; color:white; font-weight:700;
-                    font-size:1rem; padding:14px 24px; letter-spacing:0.5px;">
-            <i class="bi bi-card-checklist"></i> Ordem de Serviço
+                    font-size:1rem; padding:14px 24px; letter-spacing:0.5px;
+                    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <span><i class="bi bi-card-checklist"></i> Ordem de Serviço</span>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                {{-- Situação --}}
+                <span style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35);
+                             color:white; font-size:0.76rem; font-weight:700; letter-spacing:normal;
+                             padding:4px 12px 4px 10px; border-radius:20px;
+                             display:inline-flex; align-items:center; gap:6px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ $cor }};
+                                 box-shadow:0 0 0 2px rgba(255,255,255,0.55); display:inline-block;"></span>
+                    {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status }}
+                </span>
+
+                {{-- Prioridade/urgência --}}
+                <span style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35);
+                             color:white; font-size:0.76rem; font-weight:700; letter-spacing:normal;
+                             padding:4px 12px 4px 10px; border-radius:20px;
+                             display:inline-flex; align-items:center; gap:6px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ $corUrg }};
+                                 box-shadow:0 0 0 2px rgba(255,255,255,0.55); display:inline-block;"></span>
+                    {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
+                </span>
+            </div>
         </div>
 
         <div style="padding:24px;">
@@ -148,6 +159,15 @@
                 </div>
             </div>
 
+            {{-- Data de Entrega Prevista (definida no cadastro) --}}
+            <div style="margin-bottom:16px;">
+                <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Data de Entrega Prevista:</label>
+                <div style="padding:9px 12px; background:#f4f6fb; border-radius:6px;
+                            font-size:0.93rem; color:{{ $ordem->data_entrega ? '#333' : '#aaa' }};">
+                    {{ $ordem->data_entrega ? $ordem->data_entrega->format('d/m/Y') : 'Não informada' }}
+                </div>
+            </div>
+
             {{-- Devolutiva — Coordenador e Executor podem escrever --}}
             <div style="margin-bottom:16px;">
                 <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Devolutiva:</label>
@@ -181,6 +201,13 @@
                         <i class="bi bi-pencil"></i>
                         Atualizado por: <strong>{{ $ordem->atualizadoPor->name }}</strong>
                         em <strong>{{ $ordem->updated_at->format('d/m/Y H:i') }}</strong>
+                    </span>
+                @endif
+                @if($ordem->alterada_pelo_criador_em)
+                    <span>
+                        <i class="bi bi-clock-history"></i>
+                        Última alteração pelo solicitante:
+                        <strong>{{ $ordem->alterada_pelo_criador_em->format('d/m/Y H:i') }}</strong>
                     </span>
                 @endif
             </div>
