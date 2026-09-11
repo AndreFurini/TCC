@@ -40,13 +40,6 @@
     <h5 style="font-weight:700; color:#222; margin:0;">Detalhe da OS</h5>
 </div>
 
-@if(session('success'))
-    <div style="background:#eafaf1; border:1px solid #27ae60; color:#1e8449;
-                border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:0.88rem;">
-        <i class="bi bi-check-circle"></i> {{ session('success') }}
-    </div>
-@endif
-
 @if($podeAssumir)
     <div style="background:#eef3ff; border:1px solid #1a35a8; border-radius:10px;
                 padding:16px 20px; margin-bottom:20px; max-width:760px;
