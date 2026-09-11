@@ -44,6 +44,56 @@ class OrdemServicoController extends Controller
     }
 
     // -------------------------------------------------------
+    // HISTÓRICO — listagem completa de OS do Executor/Colaborador (tudo
+    // que cada um vê: executor = próprio setor + o que ele mesmo criou;
+    // colaborador = só o que ele criou), sem restrição de status, com
+    // filtros de pesquisa. Substitui o acesso a /ordens pra esses
+    // papéis (não gerenciam a empresa toda como coordenador/admin).
+    // -------------------------------------------------------
+    public function historico(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->isExecutor() && !$user->isColaborador()) {
+            abort(403);
+        }
+
+        $empresa_id = $user->empresa_id;
+
+        $query = OrdemServico::where('empresa_id', $empresa_id);
+
+        if ($user->isExecutor()) {
+            $query->where(function ($q) use ($user) {
+                $q->where('setor_id', $user->setor_id)
+                  ->orWhere('criado_por', $user->id);
+            });
+        } else {
+            $query->where('criado_por', $user->id);
+        }
+
+        $query->with(['setor', 'executor']);
+
+        // Filtros
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('urgencia')) {
+            $query->where('urgencia', $request->urgencia);
+        }
+        if ($request->filled('setor_id')) {
+            $query->where('setor_id', $request->setor_id);
+        }
+        if ($request->filled('busca')) {
+            $query->where('titulo', 'like', '%'.$request->busca.'%');
+        }
+
+        $ordens  = $query->latest()->get();
+        $setores = Setor::where('empresa_id', $empresa_id)->orderBy('nome')->get();
+
+        return view('ordens.historico', compact('ordens', 'setores'));
+    }
+
+    // -------------------------------------------------------
     // CREATE — formulário de nova OS
     // -------------------------------------------------------
     public function create()

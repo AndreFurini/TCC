@@ -36,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('usuarios/{usuario}/reativar', [UsuarioController::class, 'reativar'])->name('usuarios.reativar');
 
     // Ordens de Serviço
+    // (histórico do executor precisa vir ANTES do resource, senão "historico"
+    // seria capturado como {orden} pela rota de show)
+    Route::get('ordens/historico', [OrdemServicoController::class, 'historico'])->name('ordens.historico');
     Route::resource('ordens', OrdemServicoController::class);
     Route::patch('ordens/{orden}/assumir', [OrdemServicoController::class, 'assumir'])->name('ordens.assumir');
     Route::patch('ordens/{orden}/liberar', [OrdemServicoController::class, 'liberar'])->name('ordens.liberar');

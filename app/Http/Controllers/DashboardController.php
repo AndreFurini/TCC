@@ -58,10 +58,15 @@ class DashboardController extends Controller
                 ->first();
         }
 
-        // Lista de OS (Executor e Colaborador)
+        // Lista de OS no Início — Executor e Colaborador veem todos os
+        // status EXCETO Finalizada (o histórico completo, sem essa
+        // restrição, fica em /ordens/historico).
         $ordens = null;
         if ($user->isExecutor() || $user->isColaborador()) {
-            $ordens = (clone $query)->with(['setor', 'executor'])->latest()->get();
+            $ordens = (clone $query)->with(['setor', 'executor'])
+                ->where('status', '!=', 'FINALIZADA')
+                ->latest()
+                ->get();
         }
 
         // ---------------------------------------------------------------
@@ -119,6 +124,16 @@ class DashboardController extends Controller
                 ->where('setor_id', $user->setor_id)
                 ->whereNotIn('status', ['FINALIZADA', 'CANCELADA'])
                 ->whereNull('executor_id')
+                ->count();
+        }
+
+        // Painel extra do Colaborador: atrasadas, no que ele vê (só o
+        // que ele mesmo criou).
+        if ($user->isColaborador()) {
+            $atrasadas = (clone $query)
+                ->whereNotIn('status', ['FINALIZADA', 'CANCELADA'])
+                ->whereNotNull('data_entrega')
+                ->where('data_entrega', '<', now()->startOfDay())
                 ->count();
         }
 

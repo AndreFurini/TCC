@@ -570,7 +570,54 @@
      ============================================================ --}}
 @elseif($user->isColaborador())
 
-@include('partials.cards-contagem')
+{{-- Ordens (Abertas/Em Andamento/Finalizadas) + Atrasadas, tudo na mesma linha --}}
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-top:8px;">
+
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <span style="width:12px; height:12px; background:#f5a623; border-radius:50%; display:inline-block;"></span>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">Ordens Abertas</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:#222;">
+            {{ str_pad($abertas, 2, '0', STR_PAD_LEFT) }}
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <span style="width:12px; height:12px; background:#1a35a8; border-radius:50%; display:inline-block;"></span>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">Ordens Em Andamento</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:#222;">
+            {{ str_pad($em_andamento, 2, '0', STR_PAD_LEFT) }}
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <span style="width:12px; height:12px; background:#27ae60; border-radius:50%; display:inline-block;"></span>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">Ordens Finalizadas</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:#222;">
+            {{ str_pad($finalizadas, 2, '0', STR_PAD_LEFT) }}
+        </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; padding:20px 24px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.07); text-align:center;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+            <i class="bi bi-alarm" style="color:#e74c3c;"></i>
+            <span style="font-size:0.82rem; font-weight:600; color:#555;">OS Atrasadas</span>
+        </div>
+        <div style="font-size:2rem; font-weight:700; color:{{ $atrasadas > 0 ? '#e74c3c' : '#222' }};">
+            {{ str_pad($atrasadas, 2, '0', STR_PAD_LEFT) }}
+        </div>
+    </div>
+
+</div>
 
 <div style="margin-top:20px; margin-bottom:16px;">
     <a href="{{ route('ordens.create') }}"
@@ -580,27 +627,61 @@
     </a>
 </div>
 
-<div style="display:flex; flex-direction:column; gap:10px;">
-    @forelse($ordens as $ordem)
-        @php
-            $cores = ['ABERTA'=>'#f5a623','EM_ANDAMENTO'=>'#1a35a8','FINALIZADA'=>'#27ae60','CANCELADA'=>'#e74c3c'];
-            $cor = $cores[$ordem->status] ?? '#999';
-        @endphp
-        <a href="{{ route('ordens.show', $ordem->id) }}"
-           style="background:white; border-radius:10px; padding:16px 20px;
-                  box-shadow:0 2px 8px rgba(0,0,0,0.06); text-decoration:none; color:inherit;
-                  display:flex; align-items:center; justify-content:space-between;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="width:12px; height:12px; background:{{ $cor }}; border-radius:50%; flex-shrink:0;"></span>
-                <strong style="font-size:0.95rem; color:#222;">{{ $ordem->titulo }}</strong>
-            </div>
-            <span style="font-size:0.8rem; color:#999;">Criado: {{ $ordem->created_at->format('d/m/Y') }}</span>
-        </a>
-    @empty
-        <div style="color:#999; font-size:0.9rem; text-align:center; padding:40px 0;">
-            Você ainda não abriu nenhuma OS.
+<div>
+    @if($ordens->isEmpty())
+        <div style="color:#999; font-size:0.9rem; text-align:center; padding:60px 0;">
+            <i class="bi bi-card-checklist" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+            Você ainda não abriu nenhuma ordem de serviço.
         </div>
-    @endforelse
+    @else
+        @php
+            $urgCores = ['BAIXA'=>'#27ae60','MEDIA'=>'#f39c12','ALTA'=>'#e67e22','URGENTE'=>'#e74c3c'];
+        @endphp
+        <div class="tabela-os-wrap">
+            <table class="tabela-os">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Prioridade</th>
+                        <th>Título</th>
+                        <th>Situação</th>
+                        <th>Setor solicitante</th>
+                        <th>Executor</th>
+                        <th>Data de solicitação</th>
+                        <th>Data de entrega</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ordens as $ordem)
+                        @php
+                            $uCor = $urgCores[$ordem->urgencia] ?? '#999';
+                            $sCor = \App\Models\OrdemServico::STATUS_CORES[$ordem->status] ?? '#999';
+                        @endphp
+                        <tr onclick="location.href='{{ route('ordens.show', $ordem->id) }}'">
+                            <td class="muted">#{{ $ordem->id }}</td>
+                            <td>
+                                <span class="badge-tab" style="background:{{ $uCor }}22; color:{{ $uCor }};">
+                                    {{ \App\Models\OrdemServico::URGENCIA[$ordem->urgencia] ?? $ordem->urgencia }}
+                                </span>
+                            </td>
+                            <td class="col-titulo">{{ $ordem->titulo }}</td>
+                            <td>
+                                <span class="badge-tab" style="background:{{ $sCor }}22; color:{{ $sCor }};">
+                                    {{ \App\Models\OrdemServico::STATUS[$ordem->status] ?? $ordem->status }}
+                                </span>
+                            </td>
+                            <td>{{ $ordem->setor->nome ?? '—' }}</td>
+                            <td @class(['muted' => !$ordem->executor])>{{ $ordem->executor->name ?? '—' }}</td>
+                            <td>{{ $ordem->created_at->format('d/m/Y') }}</td>
+                            <td @class(['muted' => !$ordem->data_entrega])>
+                                {{ $ordem->data_entrega ? $ordem->data_entrega->format('d/m/Y') : '—' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
 </div>
 
 @endif

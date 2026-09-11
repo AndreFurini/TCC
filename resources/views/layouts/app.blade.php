@@ -371,13 +371,17 @@
                 <i class="bi bi-grid-fill"></i> Início
             </a>
             <span class="topnav-divider"></span>
-            <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
-                <i class="bi bi-card-checklist"></i> Ordens
+            <a href="{{ route('ordens.historico') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
+                <i class="bi bi-clock-history"></i> Histórico
             </a>
 
         @elseif($user->isColaborador())
             <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <i class="bi bi-card-checklist"></i> Ordens
+                <i class="bi bi-grid-fill"></i> Início
+            </a>
+            <span class="topnav-divider"></span>
+            <a href="{{ route('ordens.historico') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
+                <i class="bi bi-clock-history"></i> Histórico
             </a>
         @endif
     </nav>
