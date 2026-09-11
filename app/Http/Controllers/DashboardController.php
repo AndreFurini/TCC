@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\OrdemServico;
 use App\Models\Setor;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -17,24 +18,21 @@ class DashboardController extends Controller
         // Query base da empresa
         $query = OrdemServico::where('empresa_id', $empresa_id);
 
-        // Admin: pode filtrar por setor
+        // Admin e Coordenador: podem filtrar por setor (enxergam a empresa toda)
         $setores          = collect();
         $setor_selecionado = null;
 
-        if ($user->isAdmin()) {
-            $setores = Setor::where('empresa_id', $empresa_id)->get();
+        if ($user->isAdmin() || $user->isCoordenador()) {
+            $setores = Setor::where('empresa_id', $empresa_id)->orderBy('nome')->get();
             if ($request->filled('setor_id')) {
                 $query->where('setor_id', $request->setor_id);
                 $setor_selecionado = $setores->find($request->setor_id);
             }
         }
 
-        // Executor: só vê as suas e do setor
+        // Executor: só vê as OS do próprio setor
         if ($user->isExecutor()) {
-            $query->where(function ($q) use ($user) {
-                $q->where('executor_id', $user->id)
-                  ->orWhere('setor_id', $user->setor_id);
-            });
+            $query->where('setor_id', $user->setor_id);
         }
 
         // Colaborador: só vê as que criou
@@ -46,10 +44,10 @@ class DashboardController extends Controller
         $em_andamento = (clone $query)->where('status', 'EM_ANDAMENTO')->count();
         $finalizadas  = (clone $query)->where('status', 'FINALIZADA')->count();
 
-        // OS urgente (Admin e Coordenador)
+        // OS urgente (Admin e Coordenador) — respeita o setor selecionado pelo admin
         $urgente = null;
         if ($user->isAdmin() || $user->isCoordenador()) {
-            $urgente = OrdemServico::where('empresa_id', $empresa_id)
+            $urgente = (clone $query)
                 ->where('urgencia', 'URGENTE')
                 ->where('status', '!=', 'FINALIZADA')
                 ->latest()
@@ -59,12 +57,68 @@ class DashboardController extends Controller
         // Lista de OS (Executor e Colaborador)
         $ordens = null;
         if ($user->isExecutor() || $user->isColaborador()) {
-            $ordens = (clone $query)->with(['setor'])->latest()->get();
+            $ordens = (clone $query)->with(['setor', 'executor'])->latest()->get();
+        }
+
+        // ---------------------------------------------------------------
+        // Painel extra do Admin e do Coordenador: atrasadas, sem executor,
+        // distribuição por urgência, busca. Ranking de setores e setores
+        // sem responsável são só do Admin (gestão da empresa).
+        // ---------------------------------------------------------------
+        $atrasadas             = 0;
+        $semExecutor           = 0;
+        $distribuicaoUrgencia  = collect();
+        $rankingSetores        = collect();
+        $setoresSemResponsavel = collect();
+        $ordensRecentes        = collect();
+
+        if ($user->isAdmin() || $user->isCoordenador()) {
+            $emAberto = (clone $query)->whereNotIn('status', ['FINALIZADA', 'CANCELADA']);
+
+            $atrasadas = (clone $emAberto)
+                ->whereNotNull('data_entrega')
+                ->where('data_entrega', '<', now()->startOfDay())
+                ->count();
+
+            $semExecutor = (clone $emAberto)->whereNull('executor_id')->count();
+
+            $distribuicaoUrgencia = (clone $emAberto)
+                ->selectRaw('urgencia, COUNT(*) as total')
+                ->groupBy('urgencia')
+                ->pluck('total', 'urgencia');
+
+            // Filtros e pesquisa (Situação, Prioridade, título) — só afeta esta lista.
+            $ordensRecentes = (clone $query)
+                ->with(['setor', 'executor'])
+                ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+                ->when($request->filled('urgencia'), fn ($q) => $q->where('urgencia', $request->urgencia))
+                ->when($request->filled('busca'), fn ($q) => $q->where('titulo', 'like', '%'.$request->busca.'%'))
+                ->latest('updated_at')
+                ->take(15)
+                ->get();
+        }
+
+        if ($user->isAdmin()) {
+            $rankingSetores = Setor::where('empresa_id', $empresa_id)
+                ->where('ativo', true)
+                ->withCount(['ordensServico as os_abertas_count' => function ($q) {
+                    $q->whereNotIn('status', ['FINALIZADA', 'CANCELADA']);
+                }])
+                ->orderByDesc('os_abertas_count')
+                ->get();
+
+            $setoresSemResponsavel = Setor::where('empresa_id', $empresa_id)
+                ->where('ativo', true)
+                ->whereNull('responsavel_id')
+                ->orderBy('nome')
+                ->get();
         }
 
         return view('dashboard', compact(
             'user', 'abertas', 'em_andamento', 'finalizadas',
-            'urgente', 'ordens', 'setores', 'setor_selecionado'
+            'urgente', 'ordens', 'setores', 'setor_selecionado',
+            'atrasadas', 'semExecutor', 'distribuicaoUrgencia',
+            'rankingSetores', 'setoresSemResponsavel', 'ordensRecentes'
         ));
     }
 }
