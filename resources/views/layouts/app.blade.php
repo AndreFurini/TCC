@@ -13,84 +13,81 @@
             background-color: #eef1f7;
             font-family: 'Segoe UI', sans-serif;
             min-height: 100vh;
-            display: flex;
-        }
-
-        /* ---- SIDEBAR ---- */
-        .sidebar {
-            width: 72px;
-            background-color: #1a35a8;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 24px 0;
-            position: fixed;
-            top: 0; left: 0;
-            z-index: 100;
-        }
-
-        .sidebar a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: rgba(255,255,255,0.65);
-            text-decoration: none;
-            font-size: 0.62rem;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            padding: 12px 8px;
-            width: 100%;
-            text-align: center;
-            transition: color 0.2s, background 0.2s;
-            gap: 4px;
-        }
-
-        .sidebar a i { font-size: 1.3rem; }
-
-        .sidebar a:hover,
-        .sidebar a.active {
-            color: #ffffff;
-            background: rgba(255,255,255,0.12);
-        }
-
-        .sidebar-divider {
-            width: 36px;
-            height: 1px;
-            background: rgba(255,255,255,0.2);
-            margin: 8px auto;
-        }
-
-        /* ---- MAIN ---- */
-        .main-content {
-            margin-left: 72px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
 
         /* ---- TOPBAR ---- */
         .topbar {
             background: #ffffff;
-            padding: 14px 28px;
+            padding: 10px 28px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 12px 24px;
             border-bottom: 1px solid #dde3f0;
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 100;
+            flex-wrap: wrap;
         }
 
-        .topbar-title { font-size: 1rem; font-weight: 700; color: #1a35a8; }
-        .topbar-code  { font-size: 0.8rem; color: #888; font-weight: 500; }
+        .topbar-brand { flex-shrink: 0; }
+        .topbar-title { font-size: 1rem; font-weight: 700; color: #1a35a8; line-height: 1.2; }
+        .topbar-code  { font-size: 0.75rem; color: #888; font-weight: 500; }
 
+        /* ---- TOP NAV (módulos) ---- */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+            overflow-x: auto;
+        }
+
+        .topnav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+            color: #5b6478;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .topnav a i { font-size: 1.05rem; }
+
+        .topnav a:hover { color: #1a35a8; background: #eef1f7; }
+        .topnav a.active { color: #1a35a8; background: #eef3ff; }
+
+        .topnav-divider {
+            width: 1px;
+            height: 22px;
+            background: #dde3f0;
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+
+        /* ---- USUÁRIO (direita da barra) ---- */
         .topbar-right {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
+            margin-left: auto;
         }
+
+        .topbar-user {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            text-align: right;
+        }
+        .topbar-user-name { font-size: 0.85rem; color: #333; font-weight: 600; }
+        .topbar-user-role { font-size: 0.72rem; color: #8a93a5; }
 
         .avatar {
             width: 36px;
@@ -102,6 +99,7 @@
             justify-content: center;
             color: white;
             font-size: 1rem;
+            flex-shrink: 0;
         }
 
         .btn-logout {
@@ -118,7 +116,167 @@
         .btn-logout:hover { color: #e74c3c; border-color: #e74c3c; }
 
         /* ---- PAGE BODY ---- */
-        .page-body { padding: 28px; flex: 1; }
+        .main-content { min-height: calc(100vh - 57px); }
+        .page-body { padding: 28px; }
+
+        /* ---- BOTÕES DE AÇÃO (tamanho padrão: usuários e setores) ---- */
+        .toolbar-acoes {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-acao {
+            min-width: 150px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+        }
+
+        .btn-acao--primary { background: #1a35a8; color: #fff; }
+        .btn-acao--primary:hover { background: #142a86; }
+
+        .btn-acao--neutro { background: #fff; color: #1a35a8; border-color: #c5cde8; }
+        .btn-acao--neutro:hover { background: #eef3ff; }
+
+        .btn-acao--danger { background: #fff; color: #e74c3c; border-color: #f1b0a8; }
+        .btn-acao--danger:hover { background: #fdecea; }
+
+        .btn-acao--warning { background: #fff; color: #a86a00; border-color: #f0cd8f; }
+        .btn-acao--warning:hover { background: #fef6e7; }
+
+        .btn-acao--success { background: #fff; color: #1e8449; border-color: #a3d9b8; }
+        .btn-acao--success:hover { background: #eafaf1; }
+
+        .btn-acao:disabled,
+        .btn-acao.is-disabled {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ---- "Visualizar inativos" ---- */
+        .check-inativos {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-left: 4px;
+            font-size: 0.85rem;
+            color: #555;
+            cursor: pointer;
+            user-select: none;
+        }
+        .check-inativos input { width: 15px; height: 15px; cursor: pointer; }
+
+        /* ---- LINHAS SELECIONÁVEIS (listas de usuários e setores) ---- */
+        .linha-selecionavel {
+            cursor: pointer;
+            outline: 2px solid transparent;
+            outline-offset: -2px;
+            transition: outline-color 0.15s, box-shadow 0.15s;
+        }
+        .linha-selecionavel:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10); }
+        .linha-selecionavel.selecionado {
+            outline-color: #1a35a8;
+            box-shadow: 0 4px 16px rgba(26, 53, 168, 0.18);
+        }
+        .linha-inativa { opacity: 0.55; }
+
+        /* ---- TABELA DE ORDENS DE SERVIÇO (lista + dashboard do executor) ---- */
+        .tabela-os-wrap {
+            overflow-x: auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .tabela-os { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .tabela-os th, .tabela-os td { padding: 12px 14px; text-align: left; white-space: nowrap; }
+        .tabela-os thead th {
+            background: #f4f6fb; color: #5b6478; font-weight: 700;
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;
+            border-bottom: 1px solid #e3e8f4;
+        }
+        .tabela-os tbody tr {
+            border-bottom: 1px solid #eef1f7; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .tabela-os tbody tr:last-child { border-bottom: none; }
+        .tabela-os tbody tr:hover { background: #f7f9fd; }
+        .tabela-os td.col-titulo {
+            white-space: normal; max-width: 280px;
+            font-weight: 600; color: #222;
+        }
+        .tabela-os .badge-tab {
+            display: inline-block; font-size: 0.72rem; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+        }
+        .tabela-os td.muted { color: #999; }
+
+        .badge-inativo {
+            background: #f0f2f8;
+            color: #8a93a5;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+
+        /* ---- MODAL SIMPLES (aviso + OK) ---- */
+        .modal-simples {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(20, 25, 45, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-simples[hidden] { display: none; }
+        .modal-simples-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px 26px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        }
+        .modal-simples-icone { font-size: 2rem; color: #e67e22; margin-bottom: 10px; }
+        .modal-simples-icone.perigo { color: #e74c3c; }
+        .modal-simples-box p {
+            font-size: 0.9rem;
+            color: #444;
+            margin: 0 0 20px;
+            line-height: 1.5;
+        }
+        .modal-simples-acoes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 640px) {
+            .topbar { padding: 10px 16px; }
+            .topbar-right { order: 2; }
+            .topnav { order: 3; width: 100%; flex: none; }
+            .page-body { padding: 18px; }
+        }
 
         /* ---- ALERTS ---- */
         .alert-codigo {
@@ -168,70 +326,79 @@
 
 @php $user = Auth::user(); @endphp
 
-<!-- SIDEBAR -->
-<nav class="sidebar">
+<!-- TOPBAR -->
+<header class="topbar">
 
-    @if($user->isAdmin())
-        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-grid-fill"></i> Dashboard
-        </a>
-        <div class="sidebar-divider"></div>
-        <a href="{{ route('usuarios.index') }}" class="{{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
-            <i class="bi bi-people-fill"></i> Usuários
-        </a>
-        <a href="{{ route('setores.index') }}" class="{{ request()->routeIs('setores.*') ? 'active' : '' }}">
-            <i class="bi bi-diagram-3-fill"></i> Setores
-        </a>
-
-    @elseif($user->isCoordenador())
-        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-grid-fill"></i> Dashboard
-        </a>
-        <div class="sidebar-divider"></div>
-        <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
-            <i class="bi bi-card-checklist"></i> Ordens
-        </a>
-        <a href="{{ route('setores.index') }}" class="{{ request()->routeIs('setores.*') ? 'active' : '' }}">
-            <i class="bi bi-diagram-3-fill"></i> Setor
-        </a>
-
-    @elseif($user->isExecutor())
-        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-grid-fill"></i> Dashboard
-        </a>
-        <div class="sidebar-divider"></div>
-        <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
-            <i class="bi bi-card-checklist"></i> Ordens
-        </a>
-
-    @elseif($user->isColaborador())
-        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-card-checklist"></i> Ordens
-        </a>
-    @endif
-
-</nav>
-
-<!-- MAIN -->
-<div class="main-content">
-
-    <!-- TOPBAR -->
-    <div class="topbar">
-        <div>
-            <div class="topbar-title">CoordenaTask</div>
-            <div class="topbar-code">Código da Empresa: {{ $user->empresa->codigo_empresa ?? '' }}</div>
-        </div>
-        <div class="topbar-right">
-            <span style="font-size:0.85rem; color:#555">{{ $user->name }}</span>
-            <div class="avatar"><i class="bi bi-person-fill"></i></div>
-            <form action="{{ route('auth.logout') }}" method="POST" style="margin:0">
-                @csrf
-                <button type="submit" class="btn-logout">Sair</button>
-            </form>
-        </div>
+    <div class="topbar-brand">
+        <div class="topbar-title">CoordenaTask</div>
+        <div class="topbar-code">Código da Empresa: {{ $user->empresa->codigo_empresa ?? '' }}</div>
     </div>
 
-    <!-- CONTEÚDO -->
+    <!-- MÓDULOS -->
+    <nav class="topnav">
+        @if($user->isAdmin())
+            <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                <i class="bi bi-grid-fill"></i> Início
+            </a>
+            <span class="topnav-divider"></span>
+            <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
+                <i class="bi bi-card-checklist"></i> Ordens
+            </a>
+            <a href="{{ route('usuarios.index') }}" class="{{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
+                <i class="bi bi-people-fill"></i> Usuários
+            </a>
+            <a href="{{ route('setores.index') }}" class="{{ request()->routeIs('setores.*') ? 'active' : '' }}">
+                <i class="bi bi-diagram-3-fill"></i> Setores
+            </a>
+
+        @elseif($user->isCoordenador())
+            <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                <i class="bi bi-grid-fill"></i> Início
+            </a>
+            <span class="topnav-divider"></span>
+            <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
+                <i class="bi bi-card-checklist"></i> Ordens
+            </a>
+            <a href="{{ route('usuarios.index') }}" class="{{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
+                <i class="bi bi-people-fill"></i> Usuários
+            </a>
+            <a href="{{ route('setores.index') }}" class="{{ request()->routeIs('setores.*') ? 'active' : '' }}">
+                <i class="bi bi-diagram-3-fill"></i> Setor
+            </a>
+
+        @elseif($user->isExecutor())
+            <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                <i class="bi bi-grid-fill"></i> Início
+            </a>
+            <span class="topnav-divider"></span>
+            <a href="{{ route('ordens.index') }}" class="{{ request()->routeIs('ordens.*') ? 'active' : '' }}">
+                <i class="bi bi-card-checklist"></i> Ordens
+            </a>
+
+        @elseif($user->isColaborador())
+            <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                <i class="bi bi-card-checklist"></i> Ordens
+            </a>
+        @endif
+    </nav>
+
+    <!-- USUÁRIO + PERFIL -->
+    <div class="topbar-right">
+        <div class="topbar-user">
+            <span class="topbar-user-name">{{ $user->name }}</span>
+            <span class="topbar-user-role">{{ \App\Models\User::ROLES[$user->role] ?? $user->role }}</span>
+        </div>
+        <div class="avatar"><i class="bi bi-person-fill"></i></div>
+        <form action="{{ route('auth.logout') }}" method="POST" style="margin:0">
+            @csrf
+            <button type="submit" class="btn-logout">Sair</button>
+        </form>
+    </div>
+
+</header>
+
+<!-- CONTEÚDO -->
+<main class="main-content">
     <div class="page-body">
 
         @if(session('codigo_empresa'))
@@ -262,7 +429,7 @@
 
         @yield('content')
     </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @stack('scripts')
