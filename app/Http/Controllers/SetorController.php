@@ -9,11 +9,19 @@ use App\Models\User;
 
 class SetorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $empresa_id = Auth::user()->empresa_id;
-        $setores = Setor::where('empresa_id', $empresa_id)->get();
-        return view('setores.index', compact('setores'));
+        $empresa_id  = Auth::user()->empresa_id;
+        $verInativos = $request->boolean('inativos');
+
+        $setores = Setor::where('empresa_id', $empresa_id)
+            ->when(!$verInativos, fn ($q) => $q->where('ativo', true))
+            ->with(['responsavel', 'usuarios'])
+            ->orderBy('ativo', 'desc')
+            ->orderBy('nome')
+            ->get();
+
+        return view('setores.index', compact('setores', 'verInativos'));
     }
 
     public function create()
@@ -113,21 +121,51 @@ class SetorController extends Controller
         return redirect()->route('setores.index')->with('success', 'Setor atualizado com sucesso!');
     }
 
-    public function destroy($id)
+    // Excluir setor — só é permitido quando NÃO há nenhuma OS vinculada.
+    public function destroy(Request $request, $id)
     {
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
-        // Regra: só exclui de verdade quando não há nenhum vínculo em outras tabelas.
-        if ($setor->possuiVinculos()) {
-            $setor->update(['ativo' => false]);
-
-            return redirect()->route('setores.index')
-                ->with('warning', 'Setor possui usuários ou ordens vinculados e não pode ser excluído — foi inativado.');
+        if ($setor->temOrdensVinculadas()) {
+            return redirect()->route('setores.index', $this->filtroInativos($request))
+                ->with('error', "Não é possível excluir \"{$setor->nome}\": há ordens de serviço vinculadas. Use \"Inativar\".");
         }
 
+        // Usuários lotados no setor têm setor_id zerado pela FK (nullOnDelete).
         $setor->delete();
 
-        return redirect()->route('setores.index')->with('success', 'Setor removido com sucesso!');
+        return redirect()->route('setores.index', $this->filtroInativos($request))
+            ->with('success', "Setor \"{$setor->nome}\" excluído.");
+    }
+
+    // Inativar setor — alternativa à exclusão quando há OS vinculada.
+    public function inativar(Request $request, $id)
+    {
+        $empresa_id = Auth::user()->empresa_id;
+        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        $setor->update(['ativo' => false]);
+
+        return redirect()->route('setores.index', $this->filtroInativos($request))
+            ->with('success', "Setor \"{$setor->nome}\" inativado.");
+    }
+
+    // Reativar setor inativado.
+    public function reativar(Request $request, $id)
+    {
+        $empresa_id = Auth::user()->empresa_id;
+        $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        $setor->update(['ativo' => true]);
+
+        return redirect()->route('setores.index', $this->filtroInativos($request))
+            ->with('success', "Setor \"{$setor->nome}\" reativado.");
+    }
+
+    // Mantém o filtro "visualizar inativos" após a ação.
+    private function filtroInativos(Request $request): array
+    {
+        return $request->boolean('inativos') ? ['inativos' => 1] : [];
     }
 }

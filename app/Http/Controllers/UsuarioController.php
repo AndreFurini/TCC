@@ -10,23 +10,40 @@ use App\Models\Setor;
 
 class UsuarioController extends Controller
 {
-    // Listagem
-    public function index()
+    // Só Admin e Coordenador têm acesso à gestão de usuários.
+    private function garantirAcesso(): void
     {
-        $empresa_id = Auth::user()->empresa_id;
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->isCoordenador()) {
+            abort(403);
+        }
+    }
+
+    // Listagem — Admin e Coordenador veem todos os usuários da empresa,
+    // mas só podem agir (editar/inativar/excluir) sobre os que cadastraram.
+    public function index(Request $request)
+    {
+        $this->garantirAcesso();
+
+        $empresa_id  = Auth::user()->empresa_id;
+        $verInativos = $request->boolean('inativos');
 
         $usuarios = User::where('empresa_id', $empresa_id)
-            ->where('id', '!=', Auth::id()) // não lista o próprio admin
-            ->with('setor')
+            ->where('id', '!=', Auth::id()) // não lista o próprio usuário
+            ->when(!$verInativos, fn ($q) => $q->where('ativo', true))
+            ->with(['setor', 'criador'])
+            ->orderBy('ativo', 'desc')
             ->orderBy('name')
             ->get();
 
-        return view('usuarios.index', compact('usuarios'));
+        return view('usuarios.index', compact('usuarios', 'verInativos'));
     }
 
     // Formulário de criação
     public function create()
     {
+        $this->garantirAcesso();
+
         $setores = Setor::where('empresa_id', Auth::user()->empresa_id)->get();
         // 'admin' fica de fora: só é criado no cadastro da empresa
         $roles   = collect(User::ROLES)->except('admin')->all();
@@ -34,9 +51,11 @@ class UsuarioController extends Controller
         return view('usuarios.create', compact('setores', 'roles'));
     }
 
-    // Salvar novo usuário
+    // Salvar novo usuário — quem cadastra vira o "dono" (criado_por) dele.
     public function store(Request $request)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
 
         $request->validate([
@@ -73,18 +92,26 @@ class UsuarioController extends Controller
             'password'   => Hash::make($request->password),
             'role'       => $request->role ?: 'colaborador',
             'setor_id'   => $request->setor_id ?: null,
+            'criado_por' => Auth::id(),
         ]);
 
         return redirect()->route('usuarios.index')->with('success', 'Usuário cadastrado com sucesso!');
     }
 
-    // Formulário de edição
+    // Formulário de edição — só quem cadastrou o usuário pode editá-lo.
     public function edit($id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
-        $setores    = Setor::where('empresa_id', $empresa_id)->get();
-        $roles      = collect(User::ROLES)->except('admin')->all();
+
+        if (!$usuario->podeSerGerenciadoPor(Auth::user())) {
+            abort(403, 'Você só pode editar usuários que você mesmo cadastrou.');
+        }
+
+        $setores = Setor::where('empresa_id', $empresa_id)->get();
+        $roles   = collect(User::ROLES)->except('admin')->all();
 
         return view('usuarios.edit', compact('usuario', 'setores', 'roles'));
     }
@@ -92,8 +119,14 @@ class UsuarioController extends Controller
     // Atualizar usuário
     public function update(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        if (!$usuario->podeSerGerenciadoPor(Auth::user())) {
+            abort(403, 'Você só pode editar usuários que você mesmo cadastrou.');
+        }
 
         $request->validate([
             'name'     => 'required|string|max:255',
@@ -136,27 +169,82 @@ class UsuarioController extends Controller
         return redirect()->route('usuarios.index')->with('success', 'Usuário atualizado com sucesso!');
     }
 
-    // Excluir usuário (ou inativar, se houver histórico vinculado)
-    public function destroy($id)
+    // Excluir usuário — só é permitido quando NÃO há nenhuma OS vinculada,
+    // e só quem cadastrou o usuário pode excluí-lo.
+    public function destroy(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
 
         if ($usuario->id === Auth::id()) {
-            return redirect()->route('usuarios.index')
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
                 ->with('error', 'Você não pode excluir o próprio usuário.');
         }
 
-        // Regra: só exclui de verdade quando não há nenhum vínculo em outras tabelas.
-        if ($usuario->possuiVinculos()) {
-            $usuario->update(['ativo' => false]);
+        if (!$usuario->podeSerGerenciadoPor(Auth::user())) {
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
+                ->with('error', "Você só pode excluir usuários que você mesmo cadastrou.");
+        }
 
-            return redirect()->route('usuarios.index')
-                ->with('warning', 'Usuário possui histórico vinculado e não pode ser excluído — foi inativado.');
+        if ($usuario->temOrdensVinculadas()) {
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
+                ->with('error', "Não é possível excluir \"{$usuario->name}\": há ordens de serviço vinculadas. Use \"Inativar\".");
         }
 
         $usuario->delete();
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuário removido com sucesso!');
+        return redirect()->route('usuarios.index', $this->filtroInativos($request))
+            ->with('success', "Usuário \"{$usuario->name}\" excluído.");
+    }
+
+    // Inativar usuário — alternativa à exclusão quando há OS vinculada.
+    public function inativar(Request $request, $id)
+    {
+        $this->garantirAcesso();
+
+        $empresa_id = Auth::user()->empresa_id;
+        $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        if ($usuario->id === Auth::id()) {
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
+                ->with('error', 'Você não pode inativar o próprio usuário.');
+        }
+
+        if (!$usuario->podeSerGerenciadoPor(Auth::user())) {
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
+                ->with('error', "Você só pode inativar usuários que você mesmo cadastrou.");
+        }
+
+        $usuario->update(['ativo' => false]);
+
+        return redirect()->route('usuarios.index', $this->filtroInativos($request))
+            ->with('success', "Usuário \"{$usuario->name}\" inativado.");
+    }
+
+    // Reativar usuário inativado.
+    public function reativar(Request $request, $id)
+    {
+        $this->garantirAcesso();
+
+        $empresa_id = Auth::user()->empresa_id;
+        $usuario    = User::where('empresa_id', $empresa_id)->findOrFail($id);
+
+        if (!$usuario->podeSerGerenciadoPor(Auth::user())) {
+            return redirect()->route('usuarios.index', $this->filtroInativos($request))
+                ->with('error', "Você só pode reativar usuários que você mesmo cadastrou.");
+        }
+
+        $usuario->update(['ativo' => true]);
+
+        return redirect()->route('usuarios.index', $this->filtroInativos($request))
+            ->with('success', "Usuário \"{$usuario->name}\" reativado.");
+    }
+
+    // Mantém o filtro "visualizar inativos" após a ação.
+    private function filtroInativos(Request $request): array
+    {
+        return $request->boolean('inativos') ? ['inativos' => 1] : [];
     }
 }

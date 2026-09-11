@@ -144,9 +144,6 @@
                                 <div style="font-weight:600; font-size:0.93rem; color:#222;">
                                     {{ $membro->name }}
                                 </div>
-                                <div style="font-size:0.78rem; color:#999;">
-                                    @{{ $membro->username }}
-                                </div>
                             </div>
                             @php
                                 $badgeColors = [

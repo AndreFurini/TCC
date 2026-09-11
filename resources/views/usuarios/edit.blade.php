@@ -18,6 +18,21 @@
         Dados do Usuário
     </div>
 
+    <div style="background:#f8f9fd; border-bottom:1px solid #eef1f7; padding:12px 24px;
+                font-size:0.8rem; color:#888; display:flex; flex-wrap:wrap; gap:16px;">
+        <span>
+            <i class="bi bi-person-plus"></i>
+            Criado por: <strong>{{ $usuario->criador->name ?? 'Cadastro da empresa' }}</strong>
+            em <strong>{{ $usuario->created_at->format('d/m/Y H:i') }}</strong>
+        </span>
+        @if(!$usuario->updated_at->eq($usuario->created_at))
+            <span>
+                <i class="bi bi-clock-history"></i>
+                Última alteração: <strong>{{ $usuario->updated_at->format('d/m/Y H:i') }}</strong>
+            </span>
+        @endif
+    </div>
+
     <form action="{{ route('usuarios.update', $usuario->id) }}" method="POST" style="padding:24px;">
         @csrf
         @method('PUT')

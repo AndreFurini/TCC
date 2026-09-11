@@ -19,6 +19,7 @@ class User extends Authenticatable
         'role',
         'setor_id',
         'ativo',
+        'criado_por',
     ];
 
     protected $hidden = [
@@ -53,6 +54,18 @@ class User extends Authenticatable
         return $this->belongsTo(Setor::class);
     }
 
+    // Quem cadastrou este usuário (admin ou coordenador). Nulo = cadastro da empresa.
+    public function criador()
+    {
+        return $this->belongsTo(User::class, 'criado_por');
+    }
+
+    // Usuários que este usuário cadastrou.
+    public function criados()
+    {
+        return $this->hasMany(User::class, 'criado_por');
+    }
+
     // Helpers de role
     public function isAdmin()        { return $this->role === 'admin'; }
     public function isCoordenador()  { return $this->role === 'coordenador'; }
@@ -60,19 +73,45 @@ class User extends Authenticatable
     public function isColaborador()  { return $this->role === 'colaborador'; }
 
     /**
-     * Indica se o usuário está referenciado em outras tabelas
-     * (ordens de serviço ou como responsável de setor).
-     * Enquanto houver vínculo, ele só pode ser inativado, nunca excluído.
+     * Há alguma ordem de serviço ligada a este usuário (criou, executa ou
+     * atualizou por último)? Se sim, o usuário só pode ser inativado, nunca excluído.
      */
-    public function possuiVinculos(): bool
+    public function temOrdensVinculadas(): bool
     {
-        $emOrdens = OrdemServico::where('criado_por', $this->id)
+        return OrdemServico::where('criado_por', $this->id)
             ->orWhere('executor_id', $this->id)
             ->orWhere('atualizado_por', $this->id)
             ->exists();
+    }
 
-        $responsavelSetor = Setor::where('responsavel_id', $this->id)->exists();
+    /**
+     * Regra de gerenciamento (editar/inativar/reativar/excluir):
+     *  - Admin gerencia qualquer usuário, sem restrição.
+     *  - Coordenador nunca gerencia um admin.
+     *  - Coordenador só gerencia OUTRO COORDENADOR se foi ele quem o cadastrou
+     *    (a restrição de posse vale só entre coordenadores).
+     *  - Coordenador gerencia livremente executores e colaboradores,
+     *    independente de quem os cadastrou.
+     */
+    public function podeSerGerenciadoPor(User $ator): bool
+    {
+        if (!$ator->isAdmin() && !$ator->isCoordenador()) {
+            return false;
+        }
 
-        return $emOrdens || $responsavelSetor;
+        if ($ator->isAdmin()) {
+            return true;
+        }
+
+        // A partir daqui, $ator é coordenador.
+        if ($this->isAdmin()) {
+            return false;
+        }
+
+        if ($this->isCoordenador()) {
+            return $this->criado_por === $ator->id;
+        }
+
+        return true; // executor ou colaborador
     }
 }

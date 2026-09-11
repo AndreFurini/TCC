@@ -25,11 +25,15 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Setores (Admin)
+    // Setores (Admin) — excluir só quando não há OS vinculada; senão, inativar/reativar
     Route::resource('setores', SetorController::class);
+    Route::patch('setores/{setor}/inativar', [SetorController::class, 'inativar'])->name('setores.inativar');
+    Route::patch('setores/{setor}/reativar', [SetorController::class, 'reativar'])->name('setores.reativar');
 
-    // Usuários (Admin)
+    // Usuários (Admin) — excluir só quando não há OS vinculada; senão, inativar/reativar
     Route::resource('usuarios', UsuarioController::class);
+    Route::patch('usuarios/{usuario}/inativar', [UsuarioController::class, 'inativar'])->name('usuarios.inativar');
+    Route::patch('usuarios/{usuario}/reativar', [UsuarioController::class, 'reativar'])->name('usuarios.reativar');
 
     // Ordens de Serviço
     Route::resource('ordens', OrdemServicoController::class);

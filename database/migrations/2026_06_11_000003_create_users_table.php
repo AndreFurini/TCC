@@ -18,6 +18,12 @@ return new class extends Migration
                       ->nullable()
                       ->constrained('setores')
                       ->nullOnDelete();
+                // Quem cadastrou este usuário (admin ou coordenador). Nulo para o
+                // primeiro admin, criado sozinho no cadastro da empresa.
+                $table->foreignId('criado_por')
+                      ->nullable()
+                      ->constrained('users')
+                      ->nullOnDelete();
                 $table->string('name');
                 $table->string('username', 50)->unique();
                 $table->string('email')->unique();

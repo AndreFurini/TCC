@@ -20,14 +20,12 @@ class Setor extends Model
     ];
 
     /**
-     * Indica se o setor está referenciado em outras tabelas
-     * (usuários lotados no setor ou ordens de serviço).
-     * Enquanto houver vínculo, ele só pode ser inativado, nunca excluído.
+     * Há alguma ordem de serviço ligada a este setor? Se sim, o setor só
+     * pode ser inativado, nunca excluído.
      */
-    public function possuiVinculos(): bool
+    public function temOrdensVinculadas(): bool
     {
-        return User::where('setor_id', $this->id)->exists()
-            || OrdemServico::where('setor_id', $this->id)->exists();
+        return OrdemServico::where('setor_id', $this->id)->exists();
     }
 
     public function empresa()
@@ -44,5 +42,11 @@ class Setor extends Model
     public function usuarios()
     {
         return $this->hasMany(User::class);
+    }
+
+    // Ordens de serviço abertas para este setor
+    public function ordensServico()
+    {
+        return $this->hasMany(OrdemServico::class);
     }
 }

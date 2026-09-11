@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS users (
     id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     empresa_id        BIGINT UNSIGNED NOT NULL,
     setor_id          BIGINT UNSIGNED NULL,
+    criado_por        BIGINT UNSIGNED NULL, -- quem cadastrou (admin/coordenador); NULL = cadastro da empresa
     name              VARCHAR(255) NOT NULL,
     username          VARCHAR(50)  NOT NULL,
     email             VARCHAR(255) NOT NULL,
@@ -69,7 +70,9 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT users_empresa_id_foreign
         FOREIGN KEY (empresa_id) REFERENCES empresas (id) ON DELETE CASCADE,
     CONSTRAINT users_setor_id_foreign
-        FOREIGN KEY (setor_id) REFERENCES setores (id) ON DELETE SET NULL
+        FOREIGN KEY (setor_id) REFERENCES setores (id) ON DELETE SET NULL,
+    CONSTRAINT users_criado_por_foreign
+        FOREIGN KEY (criado_por) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Agora que users existe, adiciona a FK de responsavel_id em setores
@@ -91,6 +94,9 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
     descricao       TEXT NOT NULL,
     status          ENUM('ABERTA','EM_ANDAMENTO','FINALIZADA','CANCELADA') NOT NULL DEFAULT 'ABERTA',
     urgencia        ENUM('BAIXA','MEDIA','ALTA','URGENTE') NOT NULL DEFAULT 'BAIXA',
+    data_entrega    DATE NULL,
+    -- última vez que o CRIADOR editou o título/descrição (não muda com devolutiva/executor)
+    alterada_pelo_criador_em TIMESTAMP NULL,
     devolutiva      TEXT NULL,
     created_at      TIMESTAMP NULL,
     updated_at      TIMESTAMP NULL,
