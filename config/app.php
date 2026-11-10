@@ -63,9 +63,13 @@ return [
     | will be used by the PHP date and date-time functions. The timezone
     | is set to "UTC" by default as it is suitable for most use cases.
     |
+    | CoordenaTask: fuso de Brasília. Com "UTC", os horários exibidos (criação
+    | e alteração de OS) saíam 3h adiantados e, entre 21h e 23h59, "hoje" já
+    | era "amanhã" — o que marcava como atrasada uma OS com entrega para hoje.
+    |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'America/Sao_Paulo',
 
     /*
     |--------------------------------------------------------------------------

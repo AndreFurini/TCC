@@ -9,8 +9,20 @@ use App\Models\User;
 
 class SetorController extends Controller
 {
+    // Só Admin e Coordenador têm acesso à gestão de setores
+    // (mesma regra do UsuarioController). Executor e Colaborador recebem 403.
+    private function garantirAcesso(): void
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && !$user->isCoordenador()) {
+            abort(403);
+        }
+    }
+
     public function index(Request $request)
     {
+        $this->garantirAcesso();
+
         $empresa_id  = Auth::user()->empresa_id;
         $verInativos = $request->boolean('inativos');
 
@@ -26,6 +38,8 @@ class SetorController extends Controller
 
     public function create()
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $usuarios = User::where('empresa_id', $empresa_id)
             ->where('ativo', true)
@@ -41,6 +55,8 @@ class SetorController extends Controller
 
     public function store(Request $request)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
 
         $request->validate([
@@ -79,6 +95,8 @@ class SetorController extends Controller
 
     public function edit($id)
     {
+        $this->garantirAcesso();
+
         $empresa_id    = Auth::user()->empresa_id;
         $setor         = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
         $usuarios      = User::where('empresa_id', $empresa_id)
@@ -102,6 +120,8 @@ class SetorController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
@@ -124,6 +144,8 @@ class SetorController extends Controller
     // Excluir setor — só é permitido quando NÃO há nenhuma OS vinculada.
     public function destroy(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
@@ -142,6 +164,8 @@ class SetorController extends Controller
     // Inativar setor — alternativa à exclusão quando há OS vinculada.
     public function inativar(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
@@ -154,6 +178,8 @@ class SetorController extends Controller
     // Reativar setor inativado.
     public function reativar(Request $request, $id)
     {
+        $this->garantirAcesso();
+
         $empresa_id = Auth::user()->empresa_id;
         $setor      = Setor::where('empresa_id', $empresa_id)->findOrFail($id);
 
