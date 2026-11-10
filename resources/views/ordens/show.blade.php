@@ -30,6 +30,12 @@
     // dele já tem outro executor cuidando). Editar título/descrição, igual colaborador.
     $executorComoSolicitante = $user->isExecutor() && !$souExecutorFormal && !$podeAssumir;
     $podeEditarTituloDescricao = ($user->isColaborador() || $executorComoSolicitante) && $podeCriar;
+
+    // Coordenador e Admin gerenciam a OS: executante, status, prioridade e devolutiva.
+    $podeGerenciar = $user->isCoordenador() || $user->isAdmin();
+
+    // Excluir: só quem criou a OS (o destroy() confere de novo no servidor).
+    $podeExcluir = $podeCriar && ($podeGerenciar || $user->isColaborador() || $executorComoSolicitante);
 @endphp
 
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
@@ -147,11 +153,11 @@
                 @endif
             </div>
 
-            {{-- Executante e Status — Coordenador edita, demais só visualizam --}}
+            {{-- Executante, Status e Prioridade — Coordenador e Admin editam, demais só visualizam --}}
             <div style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
                 <div style="flex:1; min-width:180px;">
                     <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Executante:</label>
-                    @if($user->isCoordenador())
+                    @if($podeGerenciar)
                         <select name="executor_id"
                                 style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                        border-radius:6px; font-size:0.93rem; outline:none; background:white;">
@@ -173,7 +179,7 @@
 
                 <div style="flex:1; min-width:180px;">
                     <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Status:</label>
-                    @if($user->isCoordenador())
+                    @if($podeGerenciar)
                         <select name="status" required
                                 style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
                                        border-radius:6px; font-size:0.93rem; outline:none; background:white;">
@@ -191,6 +197,24 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- Prioridade — só Coordenador e Admin alteram (colaborador e executor
+                     abrem a OS como Baixa; quem gerencia ajusta depois) --}}
+                @if($podeGerenciar)
+                    <div style="flex:1; min-width:180px;">
+                        <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Prioridade:</label>
+                        <select name="urgencia" required
+                                style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
+                                       border-radius:6px; font-size:0.93rem; outline:none; background:white;">
+                            @foreach(\App\Models\OrdemServico::URGENCIA as $key => $label)
+                                <option value="{{ $key }}"
+                                    {{ old('urgencia', $ordem->urgencia) == $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
             </div>
 
             {{-- Data de Entrega Prevista (definida no cadastro) --}}
@@ -202,10 +226,10 @@
                 </div>
             </div>
 
-            {{-- Devolutiva — Coordenador e Executor podem escrever --}}
+            {{-- Devolutiva — Coordenador, Admin e Executor podem escrever --}}
             <div style="margin-bottom:16px;">
                 <label style="font-size:0.83rem; color:#444; display:block; margin-bottom:4px;">Devolutiva:</label>
-                @if($user->isCoordenador() || $souExecutorFormal)
+                @if($podeGerenciar || $souExecutorFormal)
                     <textarea name="devolutiva" rows="3"
                               placeholder="Comentários sobre a OS, andamento ou resposta ao solicitante..."
                               style="width:100%; padding:9px 12px; border:1.5px solid #c5cde8;
@@ -249,20 +273,21 @@
             {{-- Botões por role --}}
             <div style="display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap;">
 
-                {{-- COORDENADOR: Salvar e Excluir (se criou) --}}
-                @if($user->isCoordenador())
-                    @if($podeCriar)
-                        <form action="{{ route('ordens.destroy', $ordem->id) }}" method="POST"
-                              onsubmit="return confirm('Excluir esta OS? Esta ação não pode ser desfeita.')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                    style="background:#e74c3c; color:white; border:none; border-radius:6px;
-                                           padding:10px 28px; font-size:0.9rem; font-weight:600; cursor:pointer;">
-                                Excluir
-                            </button>
-                        </form>
-                    @endif
+                {{-- EXCLUIR (só quem criou a OS). O formulário de exclusão fica FORA deste
+                     formulário principal (veja formExcluirOs, logo abaixo dele): HTML não
+                     permite formulário dentro de formulário, e o navegador descartava o de
+                     dentro — o campo _method=DELETE ia junto no "Salvar" e apagava a OS.
+                     O botão se liga ao formulário certo pelo atributo form="formExcluirOs". --}}
+                @if($podeExcluir)
+                    <button type="submit" form="formExcluirOs"
+                            style="background:#e74c3c; color:white; border:none; border-radius:6px;
+                                   padding:10px 28px; font-size:0.9rem; font-weight:600; cursor:pointer;">
+                        Excluir
+                    </button>
+                @endif
+
+                {{-- COORDENADOR e ADMIN: Salvar --}}
+                @if($podeGerenciar)
                     <button type="submit"
                             style="background:#27ae60; color:white; border:none; border-radius:6px;
                                    padding:10px 36px; font-size:0.9rem; font-weight:600; cursor:pointer;">
@@ -289,31 +314,29 @@
                     @endif
                 @endif
 
-                {{-- COLABORADOR, ou EXECUTOR como solicitante: Salvar (título/desc) e Excluir (se criou) --}}
-                @if($user->isColaborador() || $executorComoSolicitante)
-                    @if($podeCriar)
-                        <form action="{{ route('ordens.destroy', $ordem->id) }}" method="POST"
-                              onsubmit="return confirm('Excluir esta OS?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                    style="background:#e74c3c; color:white; border:none; border-radius:6px;
-                                           padding:10px 28px; font-size:0.9rem; font-weight:600; cursor:pointer;">
-                                Excluir
-                            </button>
-                        </form>
-                        <button type="submit"
-                                style="background:#27ae60; color:white; border:none; border-radius:6px;
-                                       padding:10px 36px; font-size:0.9rem; font-weight:600; cursor:pointer;">
-                            Salvar
-                        </button>
-                    @endif
+                {{-- COLABORADOR, ou EXECUTOR como solicitante: Salvar (título/descrição),
+                     só quando foi ele quem criou a OS. O Excluir está no bloco acima. --}}
+                @if($podeEditarTituloDescricao)
+                    <button type="submit"
+                            style="background:#27ae60; color:white; border:none; border-radius:6px;
+                                   padding:10px 36px; font-size:0.9rem; font-weight:600; cursor:pointer;">
+                        Salvar
+                    </button>
                 @endif
 
             </div>
         </div>
     </div>
 </form>
+
+{{-- Formulário de exclusão: separado do principal de propósito (veja a nota nos botões). --}}
+@if($podeExcluir)
+    <form id="formExcluirOs" action="{{ route('ordens.destroy', $ordem->id) }}" method="POST"
+          onsubmit="return confirm('Excluir esta OS? Esta ação não pode ser desfeita.')">
+        @csrf
+        @method('DELETE')
+    </form>
+@endif
 
 @if($podeLiberar)
     <div style="max-width:760px; display:flex; justify-content:flex-end; margin-top:12px;">

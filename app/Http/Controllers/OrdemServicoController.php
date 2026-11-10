@@ -18,8 +18,8 @@ class OrdemServicoController extends Controller
         $user       = Auth::user();
         $empresa_id = $user->empresa_id;
 
-        // Coordenador e Admin veem a listagem completa da empresa.
-        // Admin apenas visualiza (histórico + filtros); não cria/edita OS.
+        // Coordenador e Admin veem a listagem completa da empresa
+        // (histórico + filtros) e podem abrir qualquer OS para alterá-la.
         if (!$user->isCoordenador() && !$user->isAdmin()) {
             return redirect()->route('dashboard');
         }
@@ -197,8 +197,9 @@ class OrdemServicoController extends Controller
             }
         }
 
+        // Coordenador e Admin editam o executante: precisam da lista de executores.
         $executores = collect();
-        if ($user->isCoordenador()) {
+        if ($user->isCoordenador() || $user->isAdmin()) {
             $executores = User::where('empresa_id', $user->empresa_id)
                 ->where('role', 'executor')
                 ->where(function ($q) use ($ordem) {
@@ -221,17 +222,23 @@ class OrdemServicoController extends Controller
         $user  = Auth::user();
         $ordem = OrdemServico::where('empresa_id', $user->empresa_id)->findOrFail($id);
 
-        // --- COORDENADOR: pode editar tudo ---
-        if ($user->isCoordenador()) {
+        // --- COORDENADOR e ADMIN: gerenciam a OS (executante, status,
+        // prioridade e devolutiva) ---
+        if ($user->isCoordenador() || $user->isAdmin()) {
             $request->validate([
                 'executor_id' => 'nullable|exists:users,id',
                 'status'      => 'required|in:ABERTA,EM_ANDAMENTO,FINALIZADA,CANCELADA',
+                'urgencia'    => 'required|in:BAIXA,MEDIA,ALTA,URGENTE',
                 'devolutiva'  => 'nullable|string',
+            ], [
+                'urgencia.required' => 'Selecione a prioridade.',
+                'urgencia.in'       => 'Prioridade inválida.',
             ]);
 
             $ordem->update([
                 'executor_id'    => $request->executor_id,
                 'status'         => $request->status,
+                'urgencia'       => $request->urgencia,
                 'devolutiva'     => $request->devolutiva,
                 'atualizado_por' => $user->id,
             ]);
